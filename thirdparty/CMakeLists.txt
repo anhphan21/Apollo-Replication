@@ -10,8 +10,8 @@ add_subdirectory(Limbo)
 add_subdirectory(munkres-cpp)
 add_subdirectory(OpenTimer)
 add_subdirectory(HeteroSTA)
+add_subdirectory(yaml-cpp)
 
 install(
     DIRECTORY NCTUgr.ICCAD2012 DESTINATION thirdparty
-    )
-
+)

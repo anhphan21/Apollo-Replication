@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     # extract the learning rate value from the json file to assign it to the optimizer of the "torch_optimizer" package
     learning_rate_value = params.__dict__.get('global_place_stages')[0].get('learning_rate')
-    
+
     # run placement
     tt = time.time()
     place(params, learning_rate_value)

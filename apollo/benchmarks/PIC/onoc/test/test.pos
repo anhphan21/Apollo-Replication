@@ -1,0 +1,14 @@
+Circuit:	8x8 lambda router
+Created by:	Anja Boos
+Created on:	Nov 6 2012
+
+NumHubs:	4
+NumMems:	4
+	H0	200	600
+	H1	200	200
+	H2	600	600
+	H3	600	200
+	M0	25	600
+	M1	25	200
+	M2	800	600
+	M3	800	200

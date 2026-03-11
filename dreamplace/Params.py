@@ -38,9 +38,8 @@ class Params:
         """
         content = """\
 ========================================================
-                       DREAMPlace
-            Yibo Lin (http://yibolin.com)
-   David Z. Pan (http://users.ece.utexas.edu/~dpan)
+            Apollo - Replica
+            Anh Phan - NTUST
 ========================================================"""
         print(content)
 

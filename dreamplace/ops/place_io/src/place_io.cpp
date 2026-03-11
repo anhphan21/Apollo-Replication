@@ -148,6 +148,10 @@ PlaceDB place_io_forward(pybind11::list const& args)
     flag = DREAMPLACE_NAMESPACE::readBookshelf(db);
     dreamplaceAssertMsg(flag, "failed to read input Bookshelf files");
 
+    // read yaml
+    flag = DREAMPLACE_NAMESPACE::readYaml(db);
+    dreamplaceAssertMsg(flag, "failed to read input Yaml file");
+
     // adjust input parameters 
     db.adjustParams();
 

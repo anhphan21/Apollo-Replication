@@ -17,8 +17,10 @@ class PlaceIOFunction(Function):
         @brief read design and store in placement database
         """
         args = "DREAMPlace"
+        # Bookshelf input
         if "aux_input" in params.__dict__ and params.aux_input:
             args += " --bookshelf_aux_input %s" % (params.aux_input)
+        # Lef/Def input
         if "lef_input" in params.__dict__ and params.lef_input:
             if isinstance(params.lef_input, list):
                 for lef in params.lef_input:
@@ -29,6 +31,10 @@ class PlaceIOFunction(Function):
             args += " --def_input %s" % (params.def_input)
         if "verilog_input" in params.__dict__ and params.verilog_input:
             args += " --verilog_input %s" % (params.verilog_input)
+        # Yaml input
+        if "yaml_input" in params.__dict__ and params.yaml_input:
+            args += "--yaml_input %s" % params.yaml_input
+
         if "sort_nets_by_degree" in params.__dict__:
             args += " --sort_nets_by_degree %s" % (params.sort_nets_by_degree)
 
