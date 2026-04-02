@@ -1,0 +1,357 @@
+Circuit:	8x8 lambda router
+Created by:	Anja Boos
+Created on:	Nov 6 2012
+
+NumPaths:	44
+n0:	H0	H1
+	pse0	cross	1	3
+	pse4	cross	1	3
+	pse8	cross	1	3
+	pse12	cross	1	3
+	pse16	drop	1	2
+	pse19	cross	0	2
+	pse22	cross	0	2
+	pse25	cross	0	2
+n1:	H0	H2
+	pse0	cross	1	3
+	pse4	cross	1	3
+	pse8	drop	1	2
+	pse11	cross	0	2
+	pse14	cross	0	2
+	pse21	cross	1	3
+	pse25	cross	1	3
+n2:	H0	H3
+	pse0	cross	1	3
+	pse4	cross	1	3
+	pse8	cross	1	3
+	pse12	cross	1	3
+	pse16	cross	1	3
+	pse20	drop	1	2
+	pse23	cross	0	2
+	pse26	cross	0	2
+n3:	H1	H0
+	pse0	cross	0	2
+	pse7	cross	1	3
+	pse11	cross	1	3
+	pse15	drop	1	2
+	pse18	cross	0	2
+	pse21	cross	0	2
+n4:	H1	H2
+	pse0	cross	0	2
+	pse7	cross	1	3
+	pse11	drop	1	2
+	pse14	cross	0	2
+	pse21	cross	1	3
+	pse25	cross	1	3
+n5:	H1	H3
+	pse0	cross	0	2
+	pse7	cross	1	3
+	pse11	cross	1	3
+	pse15	cross	1	3
+	pse19	cross	1	3
+	pse23	drop	1	2	
+	pse26	cross	0	2
+n6:	H2	H0
+	pse1	cross	1	3
+	pse5	cross	1	3
+	pse9	drop	1	2
+	pse12	cross	0	2
+	pse15	cross	0	2
+	pse18	cross	0	2
+	pse21	cross	0	2
+n7:	H2	H1
+	pse1	cross	1	3
+	pse5	cross	1	3
+	pse9	cross	1	3
+	pse13	drop	1	2
+	pse16	cross	0	2
+	pse19	cross	0	2
+	pse22	cross	0	2
+	pse25	cross	0	2
+n8:	H2	H3
+	pse1	cross	1	3
+	pse5	cross	1	3
+	pse9	cross	1	3
+	pse13	cross	1	3
+	pse17	drop	1	2
+	pse20	cross	0	2
+	pse23	cross	0	2
+	pse26	cross	0	2
+n9:	H3	H0
+	pse1	cross	0	2
+	pse4	cross	0	2
+	pse7	cross	0	2
+	pse14	cross	1	3
+	pse18	drop	1	2
+	pse21	cross	0	2
+n10:	H3	H1
+	pse1	cross	0	2
+	pse4	cross	0	2
+	pse7	cross	0	2
+	pse14	cross	1	3
+	pse18	cross	1	3
+	pse22	drop	1	2
+	pse25	cross	0	2
+n11:	H3	H2
+	pse1	cross	0	2
+	pse4	cross	0	2
+	pse7	cross	0	2
+	pse14	drop	1	2
+	pse21	cross	1	3
+	pse25	cross	1	3
+n12:	H0	M0
+	pse0	cross	1	3
+	pse4	drop	1	2
+	pse7	cross	0	2
+	pse14	cross	1	3
+	pse18	cross	1	3
+	pse22	cross	1	3
+	pse26	cross	1	3
+n13:	H0	M1
+	pse0	cross	1	3
+	pse4	cross	1	3
+	pse8	cross	1	3
+	pse12	cross	1	3
+	pse16	cross	1	3
+	pse20	cross	1	3
+	pse24	drop	1	2
+	pse27	cross	0	2
+n14:	H0	M2
+	pse0	drop	1	2
+	pse7	cross	1	3
+	pse11	cross	1	3
+	pse15	cross	1	3
+	pse19	cross	1	3
+	pse23	cross	1	3
+	pse27	cross	1	3
+n15:	H0	M3
+	pse0	cross	1	3
+	pse4	cross	1	3
+	pse8	cross	1	3
+	pse12	cross	1	3
+	pse16	cross	1	3
+	pse20	cross	1	3
+	pse24	cross	1	3
+n16:	H1	M0
+	pse0	cross	0	2
+	pse7	drop	1	2
+	pse14	cross	1	3
+	pse18	cross	1	3
+	pse22	cross	1	3
+	pse26	cross	1	3
+n17:	H1	M1
+	pse0	cross	0	2
+	pse7	cross	1	3
+	pse11	cross	1	3
+	pse15	cross	1	3
+	pse19	cross	1	3
+	pse23	cross	1	3
+	pse27	drop	1	2
+n18:	H1	M2
+	pse0	cross	0	2
+	pse7	cross	1	3
+	pse11	cross	1	3
+	pse15	cross	1	3
+	pse19	cross	1	3
+	pse23	cross	1	3
+	pse27	cross	1	3
+n19:	H1	M3
+	pse0	drop	0	3
+	pse4	cross	1	3
+	pse8	cross	1	3
+	pse12	cross	1	3
+	pse16	cross	1	3
+	pse20	cross	1	3
+	pse24	cross	1	3
+n20:	H2	M0
+	pse1	drop	1	2
+	pse4	cross	0	2
+	pse7	cross	0	2
+	pse14	cross	1	3
+	pse18	cross	1	3
+	pse22	cross	1	3
+	pse26	cross	1	3
+n21:	H2	M1
+	pse1	cross	1	3
+	pse5	cross	1	3
+	pse9	cross	1	3
+	pse13	cross	1	3
+	pse17	cross	1	3
+	pse24	cross	0	2
+	pse27	cross	0	2
+n22:	H2	M2
+	pse1	cross	1	3
+	pse5	cross	1	3
+	pse9	cross	1	3
+	pse13	cross	1	3
+	pse17	cross	1	3
+	pse24	cross	0	2
+	pse27	drop	0	3
+n23:	H2	M3
+	pse1	cross	1	3
+	pse5	cross	1	3
+	pse9	cross	1	3
+	pse13	cross	1	3
+	pse17	cross	1	3
+	pse24	drop	0	3
+n24:	H3	M0
+	pse1	cross	0	2
+	pse4	cross	0	2
+	pse7	cross	0	2
+	pse14	cross	1	3
+	pse18	cross	1	3
+	pse22	cross	1	3
+	pse26	cross	1	3
+n25:	H3	M1
+	pse1	drop	0	3
+	pse5	cross	1	3
+	pse9	cross	1	3
+	pse13	cross	1	3
+	pse17	cross	1	3
+	pse24	cross	0	2
+	pse27	cross	0	2
+n26:	H3	M2
+	pse1	cross	0	2
+	pse4	cross	0	2
+	pse7	drop	0	3
+	pse11	cross	1	3
+	pse15	cross	1	3
+	pse19	cross	1	3
+	pse23	cross	1	3
+	pse27	cross	1	3
+n27:	H3	M3
+	pse1	cross	0	2
+	pse4	drop	0	3
+	pse8	cross	1	3
+	pse12	cross	1	3
+	pse16	cross	1	3
+	pse20	cross	1	3
+	pse24	cross	1	3
+n28:	M0	H0
+	pse2	cross	1	3
+	pse6	drop	1	2
+	pse9	cross	0	2
+	pse12	cross	0	2
+	pse15	cross	0	2
+	pse18	cross	0	2
+	pse21	cross	0	2
+n29:	M0	H1
+	pse2	cross	1	3
+	pse6	cross	1	3
+	pse10	drop	1	2
+	pse13	cross	0	2
+	pse16	cross	0	2
+	pse19	cross	0	2
+	pse22	cross	0	2
+	pse25	cross	0	2
+n30:	M0	H2
+	pse2	drop	1	2
+	pse5	cross	0	2
+	pse8	cross	0	2
+	pse11	cross	0	2
+	pse14	cross	0	2
+	pse21	cross	1	3
+	pse25	cross	1	3
+n31:	M0	H3
+	pse2	cross	1	3
+	pse6	cross	1	3
+	pse10	cross	1	3
+	pse17	cross	0	2
+	pse20	cross	0	2
+	pse23	cross	0	2
+	pse26	cross	0	2
+n32:	M1	H0
+	pse2	cross	0	2
+	pse5	cross	0	2
+	pse8	cross	0	2
+	pse11	cross	0	2
+	pse14	cross	0	2
+	pse21	drop	1	2
+n33:	M1	H1
+	pse2	cross	0	2
+	pse5	cross	0	2
+	pse8	cross	0	2
+	pse11	cross	0	2
+	pse14	cross	0	2
+	pse21	cross	1	3
+	pse25	drop	1	2
+n34:	M1	H2
+	pse2	cross	0	2
+	pse5	cross	0	2
+	pse8	cross	0	2
+	pse11	cross	0	2
+	pse14	cross	0	2
+	pse21	cross	1	3
+	pse25	cross	1	3
+n35:	M1	H3
+	pse2	drop	0	3
+	pse6	cross	1	3
+	pse10	cross	1	3
+	pse17	cross	0	2
+	pse20	cross	0	2
+	pse23	cross	0	2
+	pse26	cross	0	2
+n36:	M2	H0
+	pse3	drop	1	2
+	pse6	cross	0	2
+	pse9	cross	0	2
+	pse12	cross	0	2
+	pse15	cross	0	2
+	pse18	cross	0	2
+	pse21	cross	0	2
+n37:	M2	H1
+	pse3	cross	1	3
+	pse10	cross	0	2
+	pse13	cross	0	2
+	pse16	cross	0	2
+	pse19	cross	0	2
+	pse22	cross	0	2
+	pse25	cross	0	2
+n38:	M2	H2
+	pse3	cross	1	3
+	pse10	cross	0	2
+	pse13	cross	0	2
+	pse16	cross	0	2
+	pse19	cross	0	2
+	pse22	cross	0	2
+	pse25	drop	0	3
+n39:	M2	H3
+	pse3	cross	1	3
+	pse10	drop	0	3
+	pse17	cross	0	2
+	pse20	cross	0	2
+	pse23	cross	0	2
+	pse26	cross	0	2
+n40:	M3	H0
+	pse3	cross	0	2
+	pse6	cross	0	2
+	pse9	cross	0	2
+	pse12	cross	0	2
+	pse15	cross	0	2
+	pse18	cross	0	2
+	pse21	cross	0	2
+n41:	M3	H1
+	pse3	drop	0	3
+	pse10	cross	0	2
+	pse13	cross	0	2
+	pse16	cross	0	2
+	pse19	cross	0	2
+	pse22	cross	0	2
+	pse25	cross	0	2
+n42:	M3	H2
+	pse3	cross	0	2
+	pse6	cross	0	2
+	pse9	cross	0	2
+	pse12	cross	0	2
+	pse15	cross	0	2
+	pse18	cross	0	2
+	pse21	drop	0	3
+	pse25	cross	1	3
+n43:	M3	H3
+	pse3	cross	0	2
+	pse6	drop	0	3
+	pse10	cross	1	3
+	pse17	cross	0	2
+	pse20	cross	0	2
+	pse23	cross	0	2
+	pse26	cross	0	2

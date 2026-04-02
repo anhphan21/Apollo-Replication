@@ -1,13 +1,15 @@
 You are an expert in c++ software engineer with major in EDA for physical design
 
 Task:
-Create the module in c++ to parse the netlist and library information of PIC circuit
+Create the module in c++ to parse and write the netlist and library information of PIC circuit
 
 Context: 
-- The module is written in c++
+- The module is written in c++ as backend with the api is written in python similar to the other module under place_io
+- The module creates the data structure to store all information of the netlist. Then when we access the information, the API will querry the information from that data structure
 - Use yaml-cpp in "thirdparty" directory to pre-process the yaml file
-- The module is placed in "thirdparty" directory with the name as ntust-parser
-- The example for the yaml file is the toy case example file under "benchmarks/PIC/onn/toy_example/toy_example.gp.yml"
+- The module is placed in "place_io" directory
+- The example for the yaml file is the toy case example file under "benchmarks/PIC/**.yml"
+- The function and data types are inheritent from the existed defined from place_io module
 - The format of yaml follows by structure:
 	- instances: components of the circuit with `settings` section has macro_type and placement information
 		- macro_type:
@@ -32,4 +34,18 @@ Context:
 		- num_ports: #port of the design
 		- wg_radius: radius of waveguide (I'm not sure the meaning of this but keep the value for reference)
 	- library: library information of the cell 
-		- 
+		- type: type of the cell
+		- origin: original of the macro then we calculate the pin location from this
+		- size: size of cell library
+		- site: site alignment
+		- pins: pin information of the cell
+			- Pin offset x/y: pin offset calculate from macro origin
+			- pin witdh: width of waveguide matching with the port
+			- pin orientation: port orientation angle (0, 90, 180, 270)
+			- pin layer: layer id for the pin
+	- constraints: list of constraints apply for the design
+		- constraint name
+			- type: constraint type (alignment/uniform)
+			- settings: setting for the constraint (for alignment: left/right/bottom/up, for uniform: vertical/horizontal)
+			- objects: list of components applied the constraints
+
