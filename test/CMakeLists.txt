@@ -38,3 +38,6 @@ install(
     DIRECTORY mms DESTINATION ${PROJECT_NAME}
     )
 
+install(
+    DIRECTORY PIC DESTINATION ${PROJECT_NAME}
+    )

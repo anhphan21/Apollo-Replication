@@ -8,7 +8,8 @@
 #ifndef DREAMPLACE_SITE_H
 #define DREAMPLACE_SITE_H
 
-#include "Object.h" 
+#include "Object.h"
+#include "Row.h"
 
 DREAMPLACE_BEGIN_NAMESPACE
 

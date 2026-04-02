@@ -14,6 +14,7 @@ if(NOT CMAKE_BUILD_TYPE)
         FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # This is a dirty fix for CMake on some machines that generates default CXX standard and override the custom settings, 
 # because CUDA does not support C++17 and higher. 

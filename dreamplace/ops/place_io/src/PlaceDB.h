@@ -14,6 +14,7 @@
 #include <limbo/parsers/bookshelf/bison/BookshelfDriver.h> // bookshelf parser 
 #include <limbo/parsers/gdsii/stream/GdsWriter.h> // GDSII writer 
 #include <limbo/string/String.h>
+#include "YamlDriver.h"
 
 #include "Node.h"
 #include "Net.h"
@@ -62,6 +63,7 @@ class PlaceDB : public DefParser::DefDataBase
                 , public LefParser::LefDataBase
                 , public VerilogParser::VerilogDataBase
                 , public BookshelfParser::BookshelfDataBase
+                , public YamlParser::YamlDataBase
 {
     public:
         typedef Object::coordinate_type coordinate_type;

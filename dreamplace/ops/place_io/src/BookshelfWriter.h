@@ -9,7 +9,6 @@
 #define DREAMPLACE_BOOKSHELFWRITER_H
 
 #include <cstdio>
-#include <vector>
 #include "PlaceWriter.h"
 
 DREAMPLACE_BEGIN_NAMESPACE

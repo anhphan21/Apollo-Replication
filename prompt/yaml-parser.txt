@@ -1,15 +1,11 @@
-You are an expert in c++ software engineer with major in EDA for physical design
-
 Task:
-Create the module in c++ to parse and write the netlist and library information of PIC circuit
+Create the c++ module to parse and export the netlist and library information of PIC circuit in YAML format
 
 Context: 
-- The module is written in c++ as backend with the api is written in python similar to the other module under place_io
-- The module creates the data structure to store all information of the netlist. Then when we access the information, the API will querry the information from that data structure
-- Use yaml-cpp in "thirdparty" directory to pre-process the yaml file
-- The module is placed in "place_io" directory
+- The module is written in c++ and placed under `place_io` module
+- The module includes `YamlDataBase.h`, `YamlDataWriter.h`, `YamlDataWriter.h` and `YamlDataDriver.h`
+- The module creates its own database to store all information of the netlist from yaml input which is the content of `YamlDataBase`. The Database of the program is `PlaceDb` inherits the class `YamlDatabase`
 - The example for the yaml file is the toy case example file under "benchmarks/PIC/**.yml"
-- The function and data types are inheritent from the existed defined from place_io module
 - The format of yaml follows by structure:
 	- instances: components of the circuit with `settings` section has macro_type and placement information
 		- macro_type:
@@ -48,4 +44,16 @@ Context:
 			- type: constraint type (alignment/uniform)
 			- settings: setting for the constraint (for alignment: left/right/bottom/up, for uniform: vertical/horizontal)
 			- objects: list of components applied the constraints
+	- crossing waveguide width and height
+- Create the enum in `Enum.h` to store the port orientation (0.0, 90.0, 180.0 and 270.0, which is stored as the double in the yaml input), constraint types (alignment/uniform). Adding the Yaml input format to the `FileFormat` in `Enum.h`
+- Modify the `Params.h` to  handle the Yaml input and cReate variable to check if it is the yaml input file
+- Modify the `Pin.h` that each pin has the variable to store the port orientation
+- Modify the `PlaceDB` to handle the YamlInput and also create the callback functions (follow the logic from lef/def/bookshelf/verilog) format to parse the information of yaml netlist from parser 
+- Modify the `PyPlaceDB.h` to adapt the new variable from the Yaml and create the new variables to record the number of port on each side of the node (4 sides for each node). try to follow the scheme to store value from exist variables  
+- Modify the binding function `write` anbd `apply` in the `place_io` to parse the input from yaml input file
+- Add the `readYaml` function in the `PyPlaceDB` to read the Yaml input file and create the python database for the input
+- Modify the `PybindPlaceDB` and `PybindPyPlaceDB` to map the Python database with the c++ database
 
+- The `YamlWriter` takes the information from the `YamlDataBase` and export the yaml output
+- Dont round up the number and use `float` datatype to store the value in the Yaml
+- You can create the new file `YamlUtil` to store all the helper function for processing the Yaml input to isolate the Yaml processing module

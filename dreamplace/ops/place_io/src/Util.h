@@ -10,7 +10,6 @@
 
 #include <limbo/string/String.h>
 #include <cstring>
-#include <string>
 #include <vector>
 #include "utility/src/msg.h"
 

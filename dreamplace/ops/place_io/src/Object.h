@@ -17,7 +17,7 @@ DREAMPLACE_BEGIN_NAMESPACE
 class Object 
 {
 	public:
-		typedef int coordinate_type;
+		typedef float coordinate_type;
         typedef coordinate_traits<coordinate_type>::index_type index_type;
 
         /// default constructor 

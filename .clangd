@@ -1,0 +1,5 @@
+CompileFlags:                     # Tweak the parse settings
+  Add: [--include-directory=/usr/lib/gcc/x86_64-linux-gnu/9/include]             # treat all files as C++, enable more warnings
+
+Diagnostics:
+  Suppress: builtin_definition
