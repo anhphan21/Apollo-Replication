@@ -1,20 +1,22 @@
 {
-    "aux_input": "benchmarks/simple/simple.aux",
-    "gpu": 1,
-    "num_bins_x": 8,
-    "num_bins_y": 8,
-    "opt_num_bins": [
+    "yaml_input": "benchmarks/PIC/onn/clements_4x4/clements_4x4.yml",
+    "gpu": 0,
+    "num_bins_x": 1024,
+    "num_bins_y": 1024,
+    "global_place_stages": [
         {
-            "x": 8,
-            "y": 8,
-            "iteration": 1,
+            "num_bins_x": 1024,
+            "num_bins_y": 1024,
+            "iteration": 2000,
             "learning_rate": 0.01,
             "wirelength": "weighted_average",
-            "default_wirelength": "logsumexp",
-            "optimizer": "nesterov"
+            "optimizer": "nesterov",
+            "Llambda_density_weight_iteration": 1,
+            "Lsub_iteration": 1,
+            "routability_Lsub_iteration": 5
         }
     ],
-    "target_density": 1.0,
+    "target_density": 0.9,
     "density_weight": 8e-5,
     "gamma": 4.0,
     "random_seed": 1000,
@@ -24,7 +26,16 @@
     "gp_noise_ratio": 0.025,
     "global_place_flag": 1,
     "legalize_flag": 1,
-    "detailed_place_flag": 0,
-    "stop_overflow": 0.07,
-    "dtype": "float32"
+    "stop_overflow": 0.10,
+    "dtype": "float32",
+    "plot_flag": 1,
+    "random_center_init_flag": 1,
+    "sort_nets_by_degree": 0,
+    "max_num_area_adjust": 5,
+    "node_area_adjust_overflow": 0.20,
+    "area_adjust_stop_ratio": 0.01,
+    "route_area_adjust_stop_ratio": 0.01,
+    "pin_area_adjust_stop_ratio": 0.05,
+    "num_threads": 8,
+    "deterministic_flag": 0
 }

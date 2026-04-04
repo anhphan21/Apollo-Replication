@@ -158,6 +158,26 @@ bool readBookshelf(PlaceDB& db)
     return true;
 }
 
+bool readYaml(PlaceDB& db)
+{
+    // read yaml
+    std::string const& yamlInput = db.userParam().yamlInput;
+    if (!yamlInput.empty())
+    {
+        std::string const& filename = yamlInput;
+        dreamplacePrint(kINFO, "reading %s\n", filename.c_str());
+        bool flag = YamlParser::read(db, filename);
+        if (!flag)
+        {
+            dreamplacePrint(kERROR, "YAML file parsing failed: %s\n", filename.c_str());
+            return false;
+        }
+    }
+    else dreamplacePrint(kWARN, "no YAML file specified\n");
+
+    return true;
+}
+
 void PyPlaceDB::set(PlaceDB const& db)
 {
     num_terminal_NIs = db.numIOPin();  // IO pins
@@ -337,6 +357,12 @@ void PyPlaceDB::set(PlaceDB const& db)
     }
     flat_node2pin_start_map.append(count);
 
+    // initialize per-node port counts (4 sides)
+    std::vector<int> vNodeNumPorts0(mNode2NewNodes.size(), 0);
+    std::vector<int> vNodeNumPorts90(mNode2NewNodes.size(), 0);
+    std::vector<int> vNodeNumPorts180(mNode2NewNodes.size(), 0);
+    std::vector<int> vNodeNumPorts270(mNode2NewNodes.size(), 0);
+
     num_movable_pins = 0;
     for (unsigned int i = 0, ie = db.pins().size(); i < ie; ++i)
     {
@@ -353,11 +379,46 @@ void PyPlaceDB::set(PlaceDB const& db)
         pin2node_map.append(new_node_id);
         pin2net_map.append(db.getNet(pin).id());
 
+        // store port orientation for PIC
+        double portOrientAngle = pin.portOrient().toDouble();
+        pin_port_orient.append(portOrientAngle);
+
+        // count ports per side for the original node
+        if (portOrientAngle >= 0)
+        {
+            if (portOrientAngle == 0.0) vNodeNumPorts0[node.id()] += 1;
+            else if (portOrientAngle == 90.0) vNodeNumPorts90[node.id()] += 1;
+            else if (portOrientAngle == 180.0) vNodeNumPorts180[node.id()] += 1;
+            else if (portOrientAngle == 270.0) vNodeNumPorts270[node.id()] += 1;
+        }
+
         if (node.status() != PlaceStatusEnum::FIXED /*&& node.status() != PlaceStatusEnum::DUMMY_FIXED*/)
         {
             num_movable_pins += 1;
         }
     }
+    // populate per-node port counts, mapping through mNode2NewNodes
+    for (unsigned int i = 0; i < mNode2NewNodes.size(); ++i)
+    {
+        for (unsigned int j = 0; j < mNode2NewNodes.at(i).size(); ++j)
+        {
+            if (j == 0)
+            {
+                node_num_ports_0.append(vNodeNumPorts0[i]);
+                node_num_ports_90.append(vNodeNumPorts90[i]);
+                node_num_ports_180.append(vNodeNumPorts180[i]);
+                node_num_ports_270.append(vNodeNumPorts270[i]);
+            }
+            else
+            {
+                node_num_ports_0.append(0);
+                node_num_ports_90.append(0);
+                node_num_ports_180.append(0);
+                node_num_ports_270.append(0);
+            }
+        }
+    }
+
     count = 0;
     for (unsigned int i = 0, ie = db.nets().size(); i < ie; ++i)
     {
@@ -537,7 +598,27 @@ void PyPlaceDB::set(PlaceDB const& db)
         }
     }
 
-    convertOrient(); 
+    // initialize constraints
+    num_constraints = db.constraints().size();
+    count = 0;
+    for (auto const& constr : db.constraints())
+    {
+        constraint_names.append(constr.name);
+        constraint_types.append(constr.type);
+        constraint_settings.append(constr.anchor);
+        pybind11::list objs;
+        for (auto const& obj : constr.objects)
+        {
+            objs.append(obj);
+            flat_constraint_objects.append(obj);
+        }
+        constraint_objects.append(objs);
+        flat_constraint_objects_start.append(count);
+        count += constr.objects.size();
+    }
+    flat_constraint_objects_start.append(count);
+
+    convertOrient();
 
     // must be called after conversion of orientations
     computeAreaStatistics();

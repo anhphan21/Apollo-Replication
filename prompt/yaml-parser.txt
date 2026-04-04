@@ -53,7 +53,7 @@ Context:
 - Modify the binding function `write` anbd `apply` in the `place_io` to parse the input from yaml input file
 - Add the `readYaml` function in the `PyPlaceDB` to read the Yaml input file and create the python database for the input
 - Modify the `PybindPlaceDB` and `PybindPyPlaceDB` to map the Python database with the c++ database
-
 - The `YamlWriter` takes the information from the `YamlDataBase` and export the yaml output
 - Dont round up the number and use `float` datatype to store the value in the Yaml
 - You can create the new file `YamlUtil` to store all the helper function for processing the Yaml input to isolate the Yaml processing module
+- Since the yaml input file doesn't have the row information, then use the row width and row height is 1 unit in the input parser for me. thanks

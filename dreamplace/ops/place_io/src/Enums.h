@@ -593,13 +593,123 @@ class GlobalMoveAlgo : public EnumExt<GlobalMoveAlgoEnum::GlobalMoveAlgoType>
         virtual enum_type str2Enum(std::string const& s) const;
 };
 
-/// class RegionEnumType denotes the region type defined in DEF 
+/// class PortOrient denotes port orientation angle in PIC circuits
+/// stored as double in YAML (0.0, 90.0, 180.0, 270.0)
+struct PortOrientEnum
+{
+    enum PortOrientType
+    {
+        DEG_0 = 0,     ///< 0.0 degrees
+        DEG_90 = 1,    ///< 90.0 degrees
+        DEG_180 = 2,   ///< 180.0 degrees
+        DEG_270 = 3,   ///< 270.0 degrees
+        UNKNOWN = 4
+    };
+};
+class PortOrient : public EnumExt<PortOrientEnum::PortOrientType>
+{
+    public:
+        typedef PortOrientEnum enum_wrap_type;
+        typedef enum_wrap_type::PortOrientType enum_type;
+        typedef EnumExt<enum_type> base_type;
+
+        PortOrient() : base_type() {m_value = enum_wrap_type::UNKNOWN;}
+        PortOrient(PortOrient const& rhs) : base_type() {m_value = rhs.m_value;}
+        PortOrient(enum_type const& rhs) : base_type() {m_value = rhs;}
+        PortOrient(std::string const& rhs) : base_type() {m_value = str2Enum(rhs);}
+        PortOrient& operator=(PortOrient const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        PortOrient& operator=(enum_type const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        PortOrient& operator=(std::string const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+
+        /// convert from double angle to enum
+        static enum_type fromDouble(double angle)
+        {
+            if (angle == 0.0) return enum_wrap_type::DEG_0;
+            else if (angle == 90.0) return enum_wrap_type::DEG_90;
+            else if (angle == 180.0) return enum_wrap_type::DEG_180;
+            else if (angle == 270.0) return enum_wrap_type::DEG_270;
+            else return enum_wrap_type::UNKNOWN;
+        }
+
+        /// convert from enum to double angle
+        double toDouble() const
+        {
+            switch (m_value)
+            {
+                case enum_wrap_type::DEG_0: return 0.0;
+                case enum_wrap_type::DEG_90: return 90.0;
+                case enum_wrap_type::DEG_180: return 180.0;
+                case enum_wrap_type::DEG_270: return 270.0;
+                default: return -1.0;
+            }
+        }
+
+    protected:
+        virtual std::string enum2Str(enum_type const& e) const;
+        virtual enum_type str2Enum(std::string const& s) const;
+};
+
+/// class ConstraintType denotes constraint types for PIC circuits
+struct ConstraintTypeEnum
+{
+    enum ConstraintTypeType
+    {
+        ALIGNMENT = 0,  ///< alignment constraint
+        UNIFORM = 1,    ///< uniform spacing constraint
+        UNKNOWN = 2
+    };
+};
+class ConstraintType : public EnumExt<ConstraintTypeEnum::ConstraintTypeType>
+{
+    public:
+        typedef ConstraintTypeEnum enum_wrap_type;
+        typedef enum_wrap_type::ConstraintTypeType enum_type;
+        typedef EnumExt<enum_type> base_type;
+
+        ConstraintType() : base_type() {m_value = enum_wrap_type::UNKNOWN;}
+        ConstraintType(ConstraintType const& rhs) : base_type() {m_value = rhs.m_value;}
+        ConstraintType(enum_type const& rhs) : base_type() {m_value = rhs;}
+        ConstraintType(std::string const& rhs) : base_type() {m_value = str2Enum(rhs);}
+        ConstraintType& operator=(ConstraintType const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        ConstraintType& operator=(enum_type const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        ConstraintType& operator=(std::string const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+
+    protected:
+        virtual std::string enum2Str(enum_type const& e) const;
+        virtual enum_type str2Enum(std::string const& s) const;
+};
+
+/// class RegionEnumType denotes the region type defined in DEF
 struct RegionTypeEnum
 {
     enum RegionEnumType
     {
-        FENCE = 0, 
-        GUIDE = 1, 
+        FENCE = 0,
+        GUIDE = 1,
         UNKNOWN = 2
     };
 };

@@ -11,7 +11,6 @@
 //#include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
-#include <sstream>
 //#include <boost/timer/timer.hpp>
 #include "PlaceDB.h"
 #include "Iterators.h"
@@ -24,6 +23,7 @@ bool readDef(PlaceDB& db);
 void prereadDef(PlaceDB& db, std::string const& filename);
 bool readVerilog(PlaceDB& db);
 bool readBookshelf(PlaceDB& db);
+bool readYaml(PlaceDB& db);
 
 /// database for python 
 struct PyPlaceDB
@@ -45,10 +45,16 @@ struct PyPlaceDB
     pybind11::list node2orig_node_map; ///< due to some fixed nodes may have non-rectangular shapes, we flat the node list; 
                                         ///< this map maps the new indices back to the original ones 
 
-    pybind11::list pin_direct; ///< 1D array, pin direction IO 
-    pybind11::list pin_offset_x; ///< 1D array, pin offset x to its node 
-    pybind11::list pin_offset_y; ///< 1D array, pin offset y to its node 
+    pybind11::list pin_direct; ///< 1D array, pin direction IO
+    pybind11::list pin_offset_x; ///< 1D array, pin offset x to its node
+    pybind11::list pin_offset_y; ///< 1D array, pin offset y to its node
     pybind11::list pin_names; ///< pin name
+    pybind11::list pin_port_orient; ///< 1D array, pin port orientation (0.0, 90.0, 180.0, 270.0) for PIC
+
+    pybind11::list node_num_ports_0; ///< 1D array, number of ports at 0 degrees per node
+    pybind11::list node_num_ports_90; ///< 1D array, number of ports at 90 degrees per node
+    pybind11::list node_num_ports_180; ///< 1D array, number of ports at 180 degrees per node
+    pybind11::list node_num_ports_270; ///< 1D array, number of ports at 270 degrees per node
 
     pybind11::dict net_name2id_map; ///< net name to id map
     pybind11::dict pin_name2id_map; ///< pin name to id map
@@ -97,7 +103,15 @@ struct PyPlaceDB
     double total_space_area; ///< total placeable space area excluding fixed cells. 
                             ///< This is not the exact area, because we cannot exclude the overlapping fixed cells within a bin. 
 
-    int num_movable_pins; 
+    int num_movable_pins;
+
+    unsigned int num_constraints; ///< number of constraints
+    pybind11::list constraint_names; ///< 1D array, constraint name
+    pybind11::list constraint_types; ///< 1D array, constraint type: "alignment" or "uniform"
+    pybind11::list constraint_settings; ///< 1D array, constraint setting: e.g. "left","right","top","bottom" for alignment; "horizontal","vertical" for uniform
+    pybind11::list constraint_objects; ///< array of 1D array, each entry is a list of instance names
+    pybind11::list flat_constraint_objects; ///< flatten version of constraint_objects
+    pybind11::list flat_constraint_objects_start; ///< starting index of each constraint in flat_constraint_objects
 
     PyPlaceDB()
     {

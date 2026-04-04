@@ -467,6 +467,104 @@ class PlaceDB (object):
         """
         logging.debug("row %d %s" % (row_id, self.rows[row_id]))
 
+    def print_yaml_db(self):
+        """
+        @brief print all values parsed from YAML input file stored in PyPlaceDB
+        """
+        pydb = self.pydb
+        if pydb is None:
+            logging.warning("PyPlaceDB is not initialized")
+            return
+
+        logging.info("======== YAML PyPlaceDB Summary ========")
+
+        # layout info
+        logging.info("---- Layout ----")
+        logging.info("die area: xl=%g, yl=%g, xh=%g, yh=%g" % (self.xl, self.yl, self.xh, self.yh))
+        logging.info("row_height=%g, site_width=%g" % (self.row_height, self.site_width))
+        logging.info("total_space_area=%g" % self.total_space_area)
+
+        # nodes
+        logging.info("---- Nodes ----")
+        logging.info("num_physical_nodes=%d (movable=%d, terminals=%d, terminal_NIs=%d)"
+                     % (self.num_physical_nodes,
+                        self.num_physical_nodes - self.num_terminals - self.num_terminal_NIs,
+                        self.num_terminals, self.num_terminal_NIs))
+        for i in range(self.num_physical_nodes):
+            logging.info("  node %s(%d): size(%g, %g), pos(%g, %g), orient=%s"
+                         % (self.node_names[i].decode() if isinstance(self.node_names[i], bytes) else self.node_names[i],
+                            i,
+                            self.node_size_x[i], self.node_size_y[i],
+                            self.node_x[i], self.node_y[i],
+                            self.node_orient[i].decode() if isinstance(self.node_orient[i], bytes) else self.node_orient[i]))
+
+        # pins
+        logging.info("---- Pins ----")
+        logging.info("num_pins=%d, num_movable_pins=%d" % (len(self.pin_offset_x), self.num_movable_pins))
+        for i in range(len(self.pin_offset_x)):
+            pin_name = self.pin_names[i].decode() if isinstance(self.pin_names[i], bytes) else self.pin_names[i]
+            node_name = self.node_names[self.pin2node_map[i]].decode() if isinstance(self.node_names[self.pin2node_map[i]], bytes) else self.node_names[self.pin2node_map[i]]
+            net_name = self.net_names[self.pin2net_map[i]].decode() if isinstance(self.net_names[self.pin2net_map[i]], bytes) else self.net_names[self.pin2net_map[i]]
+            direct = self.pin_direct[i].decode() if isinstance(self.pin_direct[i], bytes) else self.pin_direct[i]
+            logging.info("  pin %s(%d): node=%s, net=%s, offset(%g, %g), direct=%s"
+                         % (pin_name, i, node_name, net_name,
+                            self.pin_offset_x[i], self.pin_offset_y[i], direct))
+
+        # pin port orientations (PIC-specific, from pydb)
+        if hasattr(pydb, 'pin_port_orient') and len(pydb.pin_port_orient) > 0:
+            logging.info("---- Pin Port Orientations (PIC) ----")
+            for i in range(len(pydb.pin_port_orient)):
+                logging.info("  pin %d: port_orient=%g" % (i, pydb.pin_port_orient[i]))
+
+        # node port counts per orientation (PIC-specific, from pydb)
+        if hasattr(pydb, 'node_num_ports_0') and len(pydb.node_num_ports_0) > 0:
+            logging.info("---- Node Port Counts by Orientation (PIC) ----")
+            for i in range(len(pydb.node_num_ports_0)):
+                logging.info("  node %d: ports_0=%d, ports_90=%d, ports_180=%d, ports_270=%d"
+                             % (i, pydb.node_num_ports_0[i], pydb.node_num_ports_90[i],
+                                pydb.node_num_ports_180[i], pydb.node_num_ports_270[i]))
+
+        # nets
+        logging.info("---- Nets ----")
+        logging.info("num_nets=%d" % len(self.net_names))
+        for i in range(len(self.net_names)):
+            net_name = self.net_names[i].decode() if isinstance(self.net_names[i], bytes) else self.net_names[i]
+            pin_ids = self.net2pin_map[i]
+            pin_strs = []
+            for pid in pin_ids:
+                pname = self.pin_names[pid].decode() if isinstance(self.pin_names[pid], bytes) else self.pin_names[pid]
+                nname = self.node_names[self.pin2node_map[pid]].decode() if isinstance(self.node_names[self.pin2node_map[pid]], bytes) else self.node_names[self.pin2node_map[pid]]
+                pin_strs.append("%s/%s" % (nname, pname))
+            logging.info("  net %s(%d): weight=%g, pins=[%s]"
+                         % (net_name, i, self.net_weights[i], ", ".join(pin_strs)))
+
+        # rows
+        logging.info("---- Rows ----")
+        logging.info("num_rows=%d" % len(self.rows))
+        for i in range(len(self.rows)):
+            logging.info("  row %d: xl=%g, yl=%g, xh=%g, yh=%g"
+                         % (i, self.rows[i][0], self.rows[i][1], self.rows[i][2], self.rows[i][3]))
+
+        # regions
+        logging.info("---- Regions ----")
+        logging.info("num_regions=%d" % len(self.regions))
+        for i in range(len(self.regions)):
+            logging.info("  region %d: %s" % (i, self.regions[i]))
+
+        # constraints (PIC-specific, from pydb)
+        if hasattr(pydb, 'num_constraints') and pydb.num_constraints > 0:
+            logging.info("---- Constraints (PIC) ----")
+            logging.info("num_constraints=%d" % pydb.num_constraints)
+            for i in range(pydb.num_constraints):
+                name = pydb.constraint_names[i]
+                ctype = pydb.constraint_types[i]
+                setting = pydb.constraint_settings[i]
+                objects = list(pydb.constraint_objects[i])
+                logging.info("  constraint %s: type=%s, setting=%s, objects=%s"
+                             % (name, ctype, setting, objects))
+
+        logging.info("======== End YAML PyPlaceDB Summary ========")
+
     #def flatten_nested_map(self, net2pin_map):
     #    """
     #    @brief flatten an array of array to two arrays like CSV format

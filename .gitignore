@@ -12,4 +12,5 @@ dreamplace.egg-info
 install
 *.so
 .DS_Store
-.vscode/*
+.vscode
+apollo

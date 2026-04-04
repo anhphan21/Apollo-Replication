@@ -17,13 +17,14 @@
 
 DREAMPLACE_BEGIN_NAMESPACE
 
-/// placement solution format 
-enum SolutionFileFormat 
+/// placement solution format
+enum SolutionFileFormat
 {
     DEF, // full DEF format
     DEFSIMPLE, // simplified DEF format with only component positions
     BOOKSHELF, // write placement solution .plx in bookshlef format
-    BOOKSHELFALL // write .nodes, .nets, ... in bookshlef format
+    BOOKSHELFALL, // write .nodes, .nets, ... in bookshlef format
+    YAML // write placement solution in YAML format
 };
 
 /// convert enums to string 
@@ -70,11 +71,15 @@ struct UserParam
     std::string bookshelfAuxInput;
     std::string bookshelfPlInput; ///< additional .pl file
 
+    /// YAML input file
+    std::string yamlInput;
+    bool isYamlInput; ///< flag to indicate if the input is YAML format
+
     /// DEF size input file, only appear in the ISPD 2015 benchmarks from CUHK
     std::string defSizeInput;
 
     /// DEF output file
-    std::string defOutput;
+    std::string outputDesign;
 
     /// report output file
     std::string rptOutput; ///< report output in html format

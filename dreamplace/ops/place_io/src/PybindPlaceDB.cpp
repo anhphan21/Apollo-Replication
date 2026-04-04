@@ -58,6 +58,7 @@ void bind_PlaceDB(pybind11::module& m)
         .value("DEFSIMPLE", DREAMPLACE_NAMESPACE::DEFSIMPLE)
         .value("BOOKSHELF", DREAMPLACE_NAMESPACE::BOOKSHELF)
         .value("BOOKSHELFALL", DREAMPLACE_NAMESPACE::BOOKSHELFALL)
+        .value("YAML", DREAMPLACE_NAMESPACE::YAML)
         .export_values()
         ;
 
@@ -170,6 +171,35 @@ void bind_PlaceDB(pybind11::module& m)
     pybind11::class_<DREAMPLACE_NAMESPACE::RegionType> (m, "RegionType")
         .def(pybind11::init<>())
         .def("value", &DREAMPLACE_NAMESPACE::RegionType::value)
+        ;
+
+    pybind11::class_<DREAMPLACE_NAMESPACE::PortOrientEnum> portorientenum (m, "PortOrientEnum")
+        ;
+    pybind11::enum_<DREAMPLACE_NAMESPACE::PortOrientEnum::PortOrientType>(portorientenum, "PortOrientType")
+        .value("DEG_0", DREAMPLACE_NAMESPACE::PortOrientEnum::DEG_0)
+        .value("DEG_90", DREAMPLACE_NAMESPACE::PortOrientEnum::DEG_90)
+        .value("DEG_180", DREAMPLACE_NAMESPACE::PortOrientEnum::DEG_180)
+        .value("DEG_270", DREAMPLACE_NAMESPACE::PortOrientEnum::DEG_270)
+        .value("UNKNOWN", DREAMPLACE_NAMESPACE::PortOrientEnum::UNKNOWN)
+        .export_values()
+        ;
+    pybind11::class_<DREAMPLACE_NAMESPACE::PortOrient> (m, "PortOrient")
+        .def(pybind11::init<>())
+        .def("value", &DREAMPLACE_NAMESPACE::PortOrient::value)
+        .def("toDouble", &DREAMPLACE_NAMESPACE::PortOrient::toDouble)
+        ;
+
+    pybind11::class_<DREAMPLACE_NAMESPACE::ConstraintTypeEnum> constrainttypeenum (m, "ConstraintTypeEnum")
+        ;
+    pybind11::enum_<DREAMPLACE_NAMESPACE::ConstraintTypeEnum::ConstraintTypeType>(constrainttypeenum, "ConstraintTypeType")
+        .value("ALIGNMENT", DREAMPLACE_NAMESPACE::ConstraintTypeEnum::ALIGNMENT)
+        .value("UNIFORM", DREAMPLACE_NAMESPACE::ConstraintTypeEnum::UNIFORM)
+        .value("UNKNOWN", DREAMPLACE_NAMESPACE::ConstraintTypeEnum::UNKNOWN)
+        .export_values()
+        ;
+    pybind11::class_<DREAMPLACE_NAMESPACE::ConstraintType> (m, "ConstraintType")
+        .def(pybind11::init<>())
+        .def("value", &DREAMPLACE_NAMESPACE::ConstraintType::value)
         ;
 
     // DREAMPLACE_NAMESPACE::Object.h

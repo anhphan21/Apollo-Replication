@@ -6,6 +6,7 @@
  ************************************************************************/
 
 #include "Enums.h"
+#include <map>
 #include <typeinfo>
 
 DREAMPLACE_BEGIN_NAMESPACE
@@ -524,6 +525,94 @@ GlobalMoveAlgo::enum_type GlobalMoveAlgo::str2Enum(std::string const& s) const
         return enum_wrap_type::UNKNOWN; 
     }
     else 
+    {
+        return found->second;
+    }
+}
+
+std::string PortOrient::enum2Str(PortOrient::enum_type const& e) const
+{
+    static std::map<enum_type, std::string> mEnum2Str;
+    static bool init = true;
+
+    if (init)
+    {
+        ENUM2STR(mEnum2Str, DEG_0);
+        ENUM2STR(mEnum2Str, DEG_90);
+        ENUM2STR(mEnum2Str, DEG_180);
+        ENUM2STR(mEnum2Str, DEG_270);
+        ENUM2STR(mEnum2Str, UNKNOWN);
+        init = false;
+    }
+
+    return mEnum2Str.at(e);
+}
+
+PortOrient::enum_type PortOrient::str2Enum(std::string const& s) const
+{
+    static std::map<std::string, enum_type> mStr2Enum;
+    static bool init = true;
+
+    if (init)
+    {
+        STR2ENUM(mStr2Enum, DEG_0);
+        STR2ENUM(mStr2Enum, DEG_90);
+        STR2ENUM(mStr2Enum, DEG_180);
+        STR2ENUM(mStr2Enum, DEG_270);
+        STR2ENUM(mStr2Enum, UNKNOWN);
+
+        init = false;
+    }
+
+    std::map<std::string, enum_type>::const_iterator found = mStr2Enum.find(s);
+    if (found == mStr2Enum.end())
+    {
+        dreamplacePrint(kWARN, "%s::%s unknown enum type %s, set to UNKNOWN\n", typeid(*this).name(), __func__, s.c_str());
+        return enum_wrap_type::UNKNOWN;
+    }
+    else
+    {
+        return found->second;
+    }
+}
+
+std::string ConstraintType::enum2Str(ConstraintType::enum_type const& e) const
+{
+    static std::map<enum_type, std::string> mEnum2Str;
+    static bool init = true;
+
+    if (init)
+    {
+        mEnum2Str[enum_wrap_type::ALIGNMENT] = "alignment";
+        mEnum2Str[enum_wrap_type::UNIFORM] = "uniform";
+        mEnum2Str[enum_wrap_type::UNKNOWN] = "UNKNOWN";
+        init = false;
+    }
+
+    return mEnum2Str.at(e);
+}
+
+ConstraintType::enum_type ConstraintType::str2Enum(std::string const& s) const
+{
+    static std::map<std::string, enum_type> mStr2Enum;
+    static bool init = true;
+
+    if (init)
+    {
+        mStr2Enum["alignment"] = enum_wrap_type::ALIGNMENT;
+        mStr2Enum["uniform"] = enum_wrap_type::UNIFORM;
+        mStr2Enum["UNKNOWN"] = enum_wrap_type::UNKNOWN;
+
+        init = false;
+    }
+
+    std::map<std::string, enum_type>::const_iterator found = mStr2Enum.find(s);
+    if (found == mStr2Enum.end())
+    {
+        dreamplacePrint(kWARN, "%s::%s unknown enum type %s, set to UNKNOWN\n", typeid(*this).name(), __func__, s.c_str());
+        return enum_wrap_type::UNKNOWN;
+    }
+    else
     {
         return found->second;
     }

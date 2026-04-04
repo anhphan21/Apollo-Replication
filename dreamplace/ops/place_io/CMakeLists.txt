@@ -2,7 +2,7 @@ set(OP_NAME place_io)
 
 set(TARGET_NAME ${OP_NAME})
 
-set(INCLUDE_DIRS 
+set(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/..
   ${LIMBO_SOURCE_DIR}
   ${Boost_INCLUDE_DIRS}
@@ -23,6 +23,7 @@ set(LINK_LIBS
   # end targets in Limbo 
   OpenMP::OpenMP_CXX
   ${ZLIB_LIBRARIES}
+  yaml-cpp::yaml-cpp
   )
 
 if(CAIRO_FOUND)
@@ -45,7 +46,8 @@ add_pytorch_extension(${TARGET_NAME}_cpp
   src/PlaceDB.cpp  
   src/DefWriter.cpp
   src/BookshelfWriter.cpp
-  src/PyPlaceDB.cpp  
+  src/YamlDatabase.cpp
+  src/PyPlaceDB.cpp
   src/PybindPlaceDB.cpp  
   src/PybindPyPlaceDB.cpp  
   src/place_io.cpp  

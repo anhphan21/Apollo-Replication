@@ -159,6 +159,8 @@ class PlaceDB : public DefParser::DefDataBase
         Group const& group(index_type i) const {return m_vGroup.at(i);}
         Group& group(index_type i) {return m_vGroup.at(i);}
 
+        std::vector<YamlParser::YamlConstraint> const& constraints() const {return m_vConstraint;}
+
         int lefUnit() const {return m_lefUnit;}
         std::string lefVersion() const {return m_lefVersion;}
 
@@ -401,7 +403,17 @@ class PlaceDB : public DefParser::DefDataBase
         virtual void add_bookshelf_niterminal_layer(std::string const&, std::string const&);
         virtual void add_bookshelf_blockage_layers(std::string const&, std::vector<std::string> const&);
         virtual void set_bookshelf_design(std::string& name);
-        virtual void bookshelf_end(); 
+        virtual void bookshelf_end();
+        ///==== YAML Callbacks ====
+        virtual void yaml_settings_cbk(YamlParser::YamlSettings const& settings);
+        virtual void yaml_macro_cbk(YamlParser::YamlMacro const& macro);
+        virtual void yaml_init_site_row_cbk(std::string const& siteName);
+        virtual void yaml_prepare_cbk(unsigned int numInstances, unsigned int numNets, unsigned int numPorts);
+        virtual void yaml_instance_cbk(YamlParser::YamlInstance const& inst);
+        virtual void yaml_net_cbk(YamlParser::YamlNet const& net);
+        virtual void yaml_port_cbk(YamlParser::YamlPort const& port);
+        virtual void yaml_constraint_cbk(YamlParser::YamlConstraint const& constr);
+        virtual void yaml_end_cbk();
 
         /// derive MultiRowAttr of a cell 
         void deriveMultiRowAttr(Node& node);
@@ -493,11 +505,13 @@ class PlaceDB : public DefParser::DefDataBase
         std::vector<index_type> m_vFixedNodeIndex; ///< fixed node index 
         std::vector<index_type> m_vPlaceBlockageIndex; ///< placement blockages are stored in m_vNode, we record the index 
 
-        std::vector<Region> m_vRegion; ///< placement regions like FENCE or GUIDE 
-        std::vector<Group> m_vGroup; ///< cell groups for placement regions 
+        std::vector<Region> m_vRegion; ///< placement regions like FENCE or GUIDE
+        std::vector<Group> m_vGroup; ///< cell groups for placement regions
 
-        string2index_map_type m_mRegionName2Index; ///< map region name to index 
-        string2index_map_type m_mGroupName2Index; ///< map group name to index 
+        string2index_map_type m_mRegionName2Index; ///< map region name to index
+        string2index_map_type m_mGroupName2Index; ///< map group name to index
+
+        std::vector<YamlParser::YamlConstraint> m_vConstraint; ///< PIC placement constraints (alignment, uniform, etc.)
 
         /// data for routing configuration 
         index_type m_numRoutingGrids[3]; ///< global routing grids in X, Y and number of layers 

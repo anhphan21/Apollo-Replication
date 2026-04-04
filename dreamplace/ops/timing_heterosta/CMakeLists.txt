@@ -26,6 +26,7 @@ set(LINK_LIBS utility_cxx
   ${ZLIB_LIBRARIES}
   ${CUDA_CUDA_LIBRARY}
   stdc++fs
+  yaml-cpp::yaml-cpp
   )
 
 file(GLOB CPP_SOURCES

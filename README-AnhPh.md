@@ -7,3 +7,7 @@ docker build . --file Dockerfile --tag anhph/apollo-replication:cuda
 ```bash
 docker run -dit -v $(pwd):/Apollo-Replication -w /Apollo-Replication anhph/apollo-replication:cuda bash
 ```
+
+# How to build the code
+```bash
+```

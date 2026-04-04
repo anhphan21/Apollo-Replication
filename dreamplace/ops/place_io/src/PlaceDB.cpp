@@ -1424,7 +1424,7 @@ std::pair<PlaceDB::index_type, bool> PlaceDB::addMacro(std::string const& n) {
     return std::make_pair(found->second, false);
   else  // create
   {
-    m_vMacro.push_back(Macro());
+    m_vMacro.emplace_back();
     Macro& macro = m_vMacro.back();
     macro.setName(n);
     macro.setId(m_vMacro.size() - 1);
@@ -1482,12 +1482,13 @@ void PlaceDB::addPin(index_type macroPinId, Net& net, Node& node, std::string pi
   // create and add pin
   createPin(net, node, mpin.direct(), center(mpin.bbox()), macroPinId, pinName);
 }
+
 Pin& PlaceDB::createPin(Net& net, Node& node, SignalDirect const& direct,
                         Point<PlaceDB::coordinate_type> const& offset,
                         PlaceDB::index_type macroPinId,
                         std::string pinName) {
   // create and add pin
-  m_vPin.push_back(Pin());
+  m_vPin.emplace_back();
   Pin& pin = m_vPin.back();
   pin.setId(m_vPin.size() - 1);
 
@@ -1500,28 +1501,29 @@ Pin& PlaceDB::createPin(Net& net, Node& node, SignalDirect const& direct,
      .setName(pinName);
 
   // add pin index to net and node
-  node.pins().push_back(pin.id());
-  net.pins().push_back(pin.id());
+  node.pins().emplace_back(pin.id());
+  net.pins().emplace_back(pin.id());
   if (pin.direct() ==
       SignalDirectEnum::OUTPUT)  // set the first pin in the net to be source
     std::swap(net.pins().front(), net.pins().back());
 
   return pin;
 }
+
 void PlaceDB::deriveMultiRowAttr(Node& node) {
   // assume node status and sizes have already been set
   // the node here may be fixed instances, or io pins, or cells
 
   // currently there is no sign to tell whether a multi-row cell should align to
   // power line assume all even-row cells align to N/FN rows
-  if (node.height() ==
-      rowHeight())  // single-row cell, may be some fixed instances
+  std::cout << "Row macro: " << m_vRow.size() << "\n";
+  if (node.height() == rowHeight())  // single-row cell, may be some fixed instances
     node.setMultiRowAttr(MultiRowAttrEnum::SINGLE_ROW);
   else if (node.status() == PlaceStatusEnum::FIXED)  // large fixed instances
                                                      // can be aligned to any
                                                      // row
     node.setMultiRowAttr(MultiRowAttrEnum::MULTI_ROW_ANY);
-  else if (node.height() % rowHeight())  // odd-row cells
+  else if (is_division_integer(node.height() , rowHeight()))  // odd-row cells
     node.setMultiRowAttr(MultiRowAttrEnum::MULTI_ROW_ANY);
   else  // even-row cells
   {

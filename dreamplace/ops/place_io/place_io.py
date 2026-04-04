@@ -7,7 +7,7 @@
 from torch.autograd import Function
 
 import dreamplace.ops.place_io.place_io_cpp as place_io_cpp
-from dreamplace.ops.place_io.place_io_cpp import SolutionFileFormat, Direction1DType, Direction2DType, OrientEnum, PlaceStatusEnum, MultiRowAttrEnum, SignalDirectEnum, PlanarDirectEnum, RegionTypeEnum
+from dreamplace.ops.place_io.place_io_cpp import SolutionFileFormat, Direction1DType, Direction2DType, OrientEnum, PlaceStatusEnum, MultiRowAttrEnum, SignalDirectEnum, PlanarDirectEnum, RegionTypeEnum, PortOrientEnum, ConstraintTypeEnum
 
 
 class PlaceIOFunction(Function):
@@ -33,7 +33,7 @@ class PlaceIOFunction(Function):
             args += " --verilog_input %s" % (params.verilog_input)
         # Yaml input
         if "yaml_input" in params.__dict__ and params.yaml_input:
-            args += "--yaml_input %s" % params.yaml_input
+            args += " --yaml_input %s" % params.yaml_input
 
         if "sort_nets_by_degree" in params.__dict__:
             args += " --sort_nets_by_degree %s" % (params.sort_nets_by_degree)

@@ -8,6 +8,7 @@
 #ifndef DREAMPLACE_UTIL_H
 #define DREAMPLACE_UTIL_H
 
+#include <cmath>
 #include <limbo/string/String.h>
 #include <cstring>
 #include <vector>
@@ -190,6 +191,14 @@ class WildcardMatch {
   std::size_t m_n;                      ///< length of string
   std::size_t m_m;                      /// < length of pattern
 };
+
+inline bool is_division_integer(float a, float b) {
+    if (b == 0.0) return false;
+
+    float quotient = a / b;
+
+    return std::abs(quotient - std::round(quotient)) < std::numeric_limits<float>::epsilon();
+}
 
 DREAMPLACE_END_NAMESPACE
 
