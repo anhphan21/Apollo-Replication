@@ -35,10 +35,12 @@ class PlaceDB (object):
         """
         self.rawdb = None # raw placement database, a C++ object
         self.pydb = None # python placement database interface
+        self.is_yaml_input = None # Apollo Placement
 
         self.num_physical_nodes = 0 # number of real nodes, including movable nodes, terminals, and terminal_NIs
         self.num_terminals = 0 # number of terminals, essentially fixed macros
         self.num_terminal_NIs = 0 # number of terminal_NIs that can be overlapped, essentially IO pins
+        
         self.node_name2id_map = {} # node name to id map, cell name
         self.node_names = None # 1D array, cell name
         self.node_x = None # 1D array, cell position x
@@ -46,13 +48,17 @@ class PlaceDB (object):
         self.node_orient = None # 1D array, cell orientation
         self.node_size_x = None # 1D array, cell width
         self.node_size_y = None # 1D array, cell height
-
+        self.node_num_ports_left = None # 1D array, number of ports on the left side per node
+        self.node_num_ports_right = None # 1D array, number of ports on the right side per node
+        self.node_num_ports_lower = None # 1D array, number of ports on the lower side per node
+        self.node_num_ports_upper = None # 1D array, number of ports on the upper side per node
         self.node2orig_node_map = None # some fixed cells may have non-rectangular shapes; we flatten them and create new nodes
                                         # this map maps the current multiple node ids into the original one
 
         self.pin_direct = None # 1D array, pin direction IO
         self.pin_offset_x = None # 1D array, pin offset x to its node
         self.pin_offset_y = None # 1D array, pin offset y to its node
+        self.pin_side = None # 1D array, which side of the node each pin is on (PinSide enum: 0=LEFT, 1=RIGHT, 2=LOWER, 3=UPPER)
 
         self.net_name2id_map = {} # net name to id map
         self.net_names = None # net name
@@ -224,6 +230,8 @@ class PlaceDB (object):
         self.pin_direct = self.pin_direct[pin_order]
         self.pin_offset_x = self.pin_offset_x[pin_order]
         self.pin_offset_y = self.pin_offset_y[pin_order]
+        if self.pin_side is not None:
+            self.pin_side = self.pin_side[pin_order]
         old2new_pin_id_map = np.zeros(len(pin_order), dtype=np.int32)
         for new_pin_id in range(len(pin_order)):
             old2new_pin_id_map[pin_order[new_pin_id]] = new_pin_id
@@ -506,23 +514,19 @@ class PlaceDB (object):
             node_name = self.node_names[self.pin2node_map[i]].decode() if isinstance(self.node_names[self.pin2node_map[i]], bytes) else self.node_names[self.pin2node_map[i]]
             net_name = self.net_names[self.pin2net_map[i]].decode() if isinstance(self.net_names[self.pin2net_map[i]], bytes) else self.net_names[self.pin2net_map[i]]
             direct = self.pin_direct[i].decode() if isinstance(self.pin_direct[i], bytes) else self.pin_direct[i]
-            logging.info("  pin %s(%d): node=%s, net=%s, offset(%g, %g), direct=%s"
+            side_names = {0: "LEFT", 1: "RIGHT", 2: "LOWER", 3: "UPPER", 4: "UNKNOWN"}
+            side_str = side_names.get(int(self.pin_side[i]), "UNKNOWN") if self.pin_side is not None else "N/A"
+            logging.info("  pin %s(%d): node=%s, net=%s, offset(%g, %g), direct=%s, side=%s"
                          % (pin_name, i, node_name, net_name,
-                            self.pin_offset_x[i], self.pin_offset_y[i], direct))
+                            self.pin_offset_x[i], self.pin_offset_y[i], direct, side_str))
 
-        # pin port orientations (PIC-specific, from pydb)
-        if hasattr(pydb, 'pin_port_orient') and len(pydb.pin_port_orient) > 0:
-            logging.info("---- Pin Port Orientations (PIC) ----")
-            for i in range(len(pydb.pin_port_orient)):
-                logging.info("  pin %d: port_orient=%g" % (i, pydb.pin_port_orient[i]))
-
-        # node port counts per orientation (PIC-specific, from pydb)
-        if hasattr(pydb, 'node_num_ports_0') and len(pydb.node_num_ports_0) > 0:
-            logging.info("---- Node Port Counts by Orientation (PIC) ----")
-            for i in range(len(pydb.node_num_ports_0)):
-                logging.info("  node %d: ports_0=%d, ports_90=%d, ports_180=%d, ports_270=%d"
-                             % (i, pydb.node_num_ports_0[i], pydb.node_num_ports_90[i],
-                                pydb.node_num_ports_180[i], pydb.node_num_ports_270[i]))
+        # node port counts per physical side (PIC-specific)
+        if self.node_num_ports_left is not None and len(self.node_num_ports_left) > 0:
+            logging.info("---- Node Port Counts by Side (PIC) ----")
+            for i in range(len(self.node_num_ports_left)):
+                logging.info("  node %d: left=%d, right=%d, lower=%d, upper=%d"
+                             % (i, self.node_num_ports_left[i], self.node_num_ports_right[i],
+                                self.node_num_ports_lower[i], self.node_num_ports_upper[i]))
 
         # nets
         logging.info("---- Nets ----")
@@ -539,11 +543,11 @@ class PlaceDB (object):
                          % (net_name, i, self.net_weights[i], ", ".join(pin_strs)))
 
         # rows
-        logging.info("---- Rows ----")
-        logging.info("num_rows=%d" % len(self.rows))
-        for i in range(len(self.rows)):
-            logging.info("  row %d: xl=%g, yl=%g, xh=%g, yh=%g"
-                         % (i, self.rows[i][0], self.rows[i][1], self.rows[i][2], self.rows[i][3]))
+        # logging.info("---- Rows ----")
+        # logging.info("num_rows=%d" % len(self.rows))
+        # for i in range(len(self.rows)):
+        #     logging.info("  row %d: xl=%g, yl=%g, xh=%g, yh=%g"
+        #                  % (i, self.rows[i][0], self.rows[i][1], self.rows[i][2], self.rows[i][3]))
 
         # regions
         logging.info("---- Regions ----")
@@ -602,6 +606,7 @@ class PlaceDB (object):
         pydb = place_io.PlaceIOFunction.pydb(self.rawdb)
         self.pydb = pydb
         self.device = torch.device("cuda" if params.gpu else "cpu")
+        self.is_yaml_input = pydb.is_yaml_input
 
         self.num_physical_nodes = pydb.num_nodes
         self.num_terminals = pydb.num_terminals
@@ -638,10 +643,18 @@ class PlaceDB (object):
         self.node_size_x = np.array(pydb.node_size_x, dtype=self.dtype)
         self.node_size_y = np.array(pydb.node_size_y, dtype=self.dtype)
         self.node2orig_node_map = np.array(pydb.node2orig_node_map, dtype=np.int32)
+        
         self.pin_direct = np.array(pydb.pin_direct, dtype=np.string_)
         self.pin_offset_x = np.array(pydb.pin_offset_x, dtype=self.dtype)
         self.pin_offset_y = np.array(pydb.pin_offset_y, dtype=self.dtype)
         self.pin_names = np.array(pydb.pin_names, dtype=np.string_)
+        self.pin_side = np.array(pydb.pin_side, dtype=np.int32)
+
+        self.node_num_ports_left = np.array(pydb.node_num_ports_left, dtype=np.int32)
+        self.node_num_ports_right = np.array(pydb.node_num_ports_right, dtype=np.int32)
+        self.node_num_ports_lower = np.array(pydb.node_num_ports_lower, dtype=np.int32)
+        self.node_num_ports_upper = np.array(pydb.node_num_ports_upper, dtype=np.int32)
+
         self.net_name2id_map = pydb.net_name2id_map
         self.pin_name2id_map = pydb.pin_name2id_map
         self.net_names = np.array(pydb.net_names, dtype=np.string_)
@@ -652,6 +665,7 @@ class PlaceDB (object):
         self.net_weight_deltas = np.array(pydb.net_weight_deltas, dtype=self.dtype)
         self.net_criticality = np.array(pydb.net_criticality, dtype=self.dtype)
         self.net_criticality_deltas = np.array(pydb.net_criticality_deltas, dtype=self.dtype)
+        
         self.node2pin_map = pydb.node2pin_map
         self.flat_node2pin_map = np.array(pydb.flat_node2pin_map, dtype=np.int32)
         self.flat_node2pin_start_map = np.array(pydb.flat_node2pin_start_map, dtype=np.int32)
@@ -1021,12 +1035,23 @@ row height = %g, site width = %g
                     filler_size_x = 0
                 else:
                     filler_size_x = np.mean(self.node_size_x[node_size_order[range_lb:range_ub]])
-                filler_size_y = self.row_height
+
+                if (not self.is_yaml_input):
+                    filler_size_y = self.row_height
+                else:
+                    filler_size_y = np.mean(self.node_size_y[node_size_order[range_lb:range_ub]])
+                    as_ratio = filler_size_y / filler_size_x
+                    as_ratio_cap = max(0.2, min(as_ratio, 5.0))
+                    filler_size_y = as_ratio_cap * filler_size_x
+                    if (filler_size_x > filler_size_y):
+                        filler_size_x, filler_size_y = filler_size_y , filler_size_x
+
                 placeable_area = max(self.area - self.total_fixed_node_area, self.total_space_area)
                 content += "use placeable_area = %g to compute fillers\n" % (placeable_area)
                 self.total_filler_node_area = max(
                     total_cell_space_area * params.target_density - total_movable_cell_area, 0.0
                 )
+
                 filler_area = filler_size_x * filler_size_y
                 if filler_area == 0: 
                     self.num_filler_nodes = 0

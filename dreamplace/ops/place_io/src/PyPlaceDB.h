@@ -50,11 +50,12 @@ struct PyPlaceDB
     pybind11::list pin_offset_y; ///< 1D array, pin offset y to its node
     pybind11::list pin_names; ///< pin name
     pybind11::list pin_port_orient; ///< 1D array, pin port orientation (0.0, 90.0, 180.0, 270.0) for PIC
+    pybind11::list pin_side; ///< 1D array, which side of the node each pin is on (PinSideEnum: 0=LEFT, 1=RIGHT, 2=LOWER, 3=UPPER)
 
-    pybind11::list node_num_ports_0; ///< 1D array, number of ports at 0 degrees per node
-    pybind11::list node_num_ports_90; ///< 1D array, number of ports at 90 degrees per node
-    pybind11::list node_num_ports_180; ///< 1D array, number of ports at 180 degrees per node
-    pybind11::list node_num_ports_270; ///< 1D array, number of ports at 270 degrees per node
+    pybind11::list node_num_ports_left; ///< 1D array, number of ports on the left side per node
+    pybind11::list node_num_ports_right; ///< 1D array, number of ports on the right side per node
+    pybind11::list node_num_ports_lower; ///< 1D array, number of ports on the lower side per node
+    pybind11::list node_num_ports_upper; ///< 1D array, number of ports on the upper side per node
 
     pybind11::dict net_name2id_map; ///< net name to id map
     pybind11::dict pin_name2id_map; ///< pin name to id map
@@ -92,6 +93,8 @@ struct PyPlaceDB
     pybind11::list unit_vertical_capacities; /// number of vertical tracks of layers per unit distance 
     pybind11::list initial_horizontal_demand_map; ///< initial routing demand from fixed cells, indexed by (layer, grid x, grid y) 
     pybind11::list initial_vertical_demand_map; ///< initial routing demand from fixed cells, indexed by (layer, grid x, grid y)   
+
+    bool is_yaml_input;
 
     int xl; 
     int yl; 

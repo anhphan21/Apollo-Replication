@@ -576,6 +576,56 @@ PortOrient::enum_type PortOrient::str2Enum(std::string const& s) const
     }
 }
 
+std::string PinSide::enum2Str(PinSide::enum_type const& e) const
+{
+    static std::map<enum_type, std::string> mEnum2Str;
+    static bool init = true;
+
+    if (init)
+    {
+        mEnum2Str[enum_wrap_type::LEFT] = "LEFT";
+        mEnum2Str[enum_wrap_type::RIGHT] = "RIGHT";
+        mEnum2Str[enum_wrap_type::LOWER] = "LOWER";
+        mEnum2Str[enum_wrap_type::UPPER] = "UPPER";
+        mEnum2Str[enum_wrap_type::UNKNOWN] = "UNKNOWN";
+        init = false;
+    }
+
+    return mEnum2Str.at(e);
+}
+
+PinSide::enum_type PinSide::str2Enum(std::string const& s) const
+{
+    static std::map<std::string, enum_type> mStr2Enum;
+    static bool init = true;
+
+    if (init)
+    {
+        mStr2Enum["LEFT"] = enum_wrap_type::LEFT;
+        mStr2Enum["left"] = enum_wrap_type::LEFT;
+        mStr2Enum["RIGHT"] = enum_wrap_type::RIGHT;
+        mStr2Enum["right"] = enum_wrap_type::RIGHT;
+        mStr2Enum["LOWER"] = enum_wrap_type::LOWER;
+        mStr2Enum["lower"] = enum_wrap_type::LOWER;
+        mStr2Enum["UPPER"] = enum_wrap_type::UPPER;
+        mStr2Enum["upper"] = enum_wrap_type::UPPER;
+        mStr2Enum["UNKNOWN"] = enum_wrap_type::UNKNOWN;
+
+        init = false;
+    }
+
+    std::map<std::string, enum_type>::const_iterator found = mStr2Enum.find(s);
+    if (found == mStr2Enum.end())
+    {
+        dreamplacePrint(kWARN, "%s::%s unknown enum type %s, set to UNKNOWN\n", typeid(*this).name(), __func__, s.c_str());
+        return enum_wrap_type::UNKNOWN;
+    }
+    else
+    {
+        return found->second;
+    }
+}
+
 std::string ConstraintType::enum2Str(ConstraintType::enum_type const& e) const
 {
     static std::map<enum_type, std::string> mEnum2Str;

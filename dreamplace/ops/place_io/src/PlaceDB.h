@@ -168,6 +168,8 @@ class PlaceDB : public DefParser::DefDataBase
         std::string defVersion() const {return m_defVersion;}
         std::string designName() const {return m_designName;}
 
+        bool isYamlDesign() const {return m_userParam.isYamlInput;}
+
         /// \brief sometimes the units may be different 
         /// Need to scale to LEF unit 
         double lefDefUnitRatio() const {return lefUnit() / defUnit();}

@@ -661,6 +661,50 @@ class PortOrient : public EnumExt<PortOrientEnum::PortOrientType>
         virtual enum_type str2Enum(std::string const& s) const;
 };
 
+/// class PinSide denotes which physical side of a node a pin is on (PIC)
+struct PinSideEnum
+{
+    enum PinSideType
+    {
+        LEFT = 0,    ///< left side of the node
+        RIGHT = 1,   ///< right side of the node
+        LOWER = 2,   ///< lower side of the node
+        UPPER = 3,   ///< upper side of the node
+        UNKNOWN = 4
+    };
+};
+class PinSide : public EnumExt<PinSideEnum::PinSideType>
+{
+    public:
+        typedef PinSideEnum enum_wrap_type;
+        typedef enum_wrap_type::PinSideType enum_type;
+        typedef EnumExt<enum_type> base_type;
+
+        PinSide() : base_type() {m_value = enum_wrap_type::UNKNOWN;}
+        PinSide(PinSide const& rhs) : base_type() {m_value = rhs.m_value;}
+        PinSide(enum_type const& rhs) : base_type() {m_value = rhs;}
+        PinSide(std::string const& rhs) : base_type() {m_value = str2Enum(rhs);}
+        PinSide& operator=(PinSide const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        PinSide& operator=(enum_type const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        PinSide& operator=(std::string const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+
+    protected:
+        virtual std::string enum2Str(enum_type const& e) const;
+        virtual enum_type str2Enum(std::string const& s) const;
+};
+
 /// class ConstraintType denotes constraint types for PIC circuits
 struct ConstraintTypeEnum
 {
