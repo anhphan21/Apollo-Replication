@@ -110,10 +110,10 @@ struct PyPlaceDB
 
     unsigned int num_constraints; ///< number of constraints
     pybind11::list constraint_names; ///< 1D array, constraint name
-    pybind11::list constraint_types; ///< 1D array, constraint type: "alignment" or "uniform"
-    pybind11::list constraint_settings; ///< 1D array, constraint setting: e.g. "left","right","top","bottom" for alignment; "horizontal","vertical" for uniform
-    pybind11::list constraint_objects; ///< array of 1D array, each entry is a list of instance names
-    pybind11::list flat_constraint_objects; ///< flatten version of constraint_objects
+    pybind11::list constraint_types; ///< 1D array, constraint type (ConstraintTypeEnum: 0=ALIGNMENT, 1=UNIFORM)
+    pybind11::list constraint_settings; ///< 1D array, constraint setting (ConstraintSettingEnum: 0=LEFT, 1=RIGHT, 2=LOWER, 3=UPPER, 4=HORIZONTAL, 5=VERTICAL)
+    pybind11::list constraint_objects; ///< array of 1D array, each entry is a list of node indices (int)
+    pybind11::list flat_constraint_objects; ///< flatten version of constraint_objects (node indices)
     pybind11::list flat_constraint_objects_start; ///< starting index of each constraint in flat_constraint_objects
 
     PyPlaceDB()

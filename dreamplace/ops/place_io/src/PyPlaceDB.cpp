@@ -573,21 +573,28 @@ void PyPlaceDB::set(PlaceDB const& db) {
     }
   }
 
-  // initialize constraints
+  // initialize constraints — resolve instance names to node indices
   num_constraints = db.constraints().size();
   count           = 0;
   for (auto const& constr : db.constraints()) {
     constraint_names.append(constr.name);
-    constraint_types.append(constr.type);
-    constraint_settings.append(constr.anchor);
+    constraint_types.append(static_cast<int>(ConstraintType(constr.type).value()));
+    constraint_settings.append(static_cast<int>(ConstraintSetting(constr.anchor).value()));
     pybind11::list objs;
     for (auto const& obj : constr.objects) {
-      objs.append(obj);
-      flat_constraint_objects.append(obj);
+      pybind11::str key(obj);
+      if (node_name2id_map.contains(key)) {
+        int node_id = node_name2id_map[key].cast<int>();
+        objs.append(node_id);
+        flat_constraint_objects.append(node_id);
+      } else {
+        dreamplacePrint(kWARN, "constraint '%s': instance '%s' not found in node_name2id_map, skipping\n",
+                        constr.name.c_str(), obj.c_str());
+      }
     }
     constraint_objects.append(objs);
     flat_constraint_objects_start.append(count);
-    count += constr.objects.size();
+    count += pybind11::len(objs);
   }
   flat_constraint_objects_start.append(count);
 

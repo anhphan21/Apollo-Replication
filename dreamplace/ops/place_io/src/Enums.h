@@ -747,6 +747,54 @@ class ConstraintType : public EnumExt<ConstraintTypeEnum::ConstraintTypeType>
         virtual enum_type str2Enum(std::string const& s) const;
 };
 
+/// class ConstraintSetting denotes constraint setting/anchor for PIC circuits
+/// For alignment: LEFT, RIGHT, LOWER, UPPER
+/// For uniform: HORIZONTAL, VERTICAL
+struct ConstraintSettingEnum
+{
+    enum ConstraintSettingType
+    {
+        LEFT = 0,        ///< align left edges
+        RIGHT = 1,       ///< align right edges
+        LOWER = 2,       ///< align lower edges
+        UPPER = 3,       ///< align upper edges
+        HORIZONTAL = 4,  ///< uniform horizontal spacing
+        VERTICAL = 5,    ///< uniform vertical spacing
+        UNKNOWN = 6
+    };
+};
+class ConstraintSetting : public EnumExt<ConstraintSettingEnum::ConstraintSettingType>
+{
+    public:
+        typedef ConstraintSettingEnum enum_wrap_type;
+        typedef enum_wrap_type::ConstraintSettingType enum_type;
+        typedef EnumExt<enum_type> base_type;
+
+        ConstraintSetting() : base_type() {m_value = enum_wrap_type::UNKNOWN;}
+        ConstraintSetting(ConstraintSetting const& rhs) : base_type() {m_value = rhs.m_value;}
+        ConstraintSetting(enum_type const& rhs) : base_type() {m_value = rhs;}
+        ConstraintSetting(std::string const& rhs) : base_type() {m_value = str2Enum(rhs);}
+        ConstraintSetting& operator=(ConstraintSetting const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        ConstraintSetting& operator=(enum_type const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+        ConstraintSetting& operator=(std::string const& rhs)
+        {
+            this->base_type::operator=(rhs);
+            return *this;
+        }
+
+    protected:
+        virtual std::string enum2Str(enum_type const& e) const;
+        virtual enum_type str2Enum(std::string const& s) const;
+};
+
 /// class RegionEnumType denotes the region type defined in DEF
 struct RegionTypeEnum
 {

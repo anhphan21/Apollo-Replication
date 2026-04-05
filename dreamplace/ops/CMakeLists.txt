@@ -11,6 +11,7 @@ add_subdirectory(electric_potential)
 add_subdirectory(hpwl)
 # add_subdirectory(rmst_wl)
 add_subdirectory(weighted_average_wirelength)
+add_subdirectory(cos_weighted_average_wirelength)
 add_subdirectory(logsumexp_wirelength)
 add_subdirectory(fence_region)
 # legalization operators

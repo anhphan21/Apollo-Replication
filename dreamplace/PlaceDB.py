@@ -82,6 +82,15 @@ class PlaceDB (object):
         self.flat_region_boxes_start = None # start indices of regions, length of num regions + 1
         self.node2fence_region_map = None # map cell to a region, maximum integer if no fence region
 
+        # constraints (PIC-specific)
+        self.num_constraints = 0
+        self.constraint_names = None # 1D array, constraint name
+        self.constraint_types = None # 1D array, constraint type (ConstraintType enum: 0=ALIGNMENT, 1=UNIFORM)
+        self.constraint_settings = None # 1D array, constraint setting (ConstraintSetting enum: 0=LEFT, 1=RIGHT, 2=LOWER, 3=UPPER, 4=HORIZONTAL, 5=VERTICAL)
+        self.constraint_objects = None # array of 1D array, each entry is a list of node indices (int)
+        self.flat_constraint_objects = None # flatten version of constraint_objects (node indices)
+        self.flat_constraint_objects_start = None # starting index of each constraint in flat_constraint_objects
+
         self.xl = None
         self.yl = None
         self.xh = None
@@ -555,17 +564,20 @@ class PlaceDB (object):
         for i in range(len(self.regions)):
             logging.info("  region %d: %s" % (i, self.regions[i]))
 
-        # constraints (PIC-specific, from pydb)
-        if hasattr(pydb, 'num_constraints') and pydb.num_constraints > 0:
+        # constraints (PIC-specific)
+        if self.num_constraints > 0:
             logging.info("---- Constraints (PIC) ----")
-            logging.info("num_constraints=%d" % pydb.num_constraints)
-            for i in range(pydb.num_constraints):
-                name = pydb.constraint_names[i]
-                ctype = pydb.constraint_types[i]
-                setting = pydb.constraint_settings[i]
-                objects = list(pydb.constraint_objects[i])
-                logging.info("  constraint %s: type=%s, setting=%s, objects=%s"
-                             % (name, ctype, setting, objects))
+            logging.info("num_constraints=%d" % self.num_constraints)
+            constraint_type_names = {0: "ALIGNMENT", 1: "UNIFORM", 2: "UNKNOWN"}
+            constraint_setting_names = {0: "LEFT", 1: "RIGHT", 2: "LOWER", 3: "UPPER", 4: "HORIZONTAL", 5: "VERTICAL", 6: "UNKNOWN"}
+            for i in range(self.num_constraints):
+                name = self.constraint_names[i].decode() if isinstance(self.constraint_names[i], bytes) else self.constraint_names[i]
+                ctype = constraint_type_names.get(int(self.constraint_types[i]), "UNKNOWN")
+                setting = constraint_setting_names.get(int(self.constraint_settings[i]), "UNKNOWN")
+                node_ids = list(self.constraint_objects[i])
+                node_names_list = [self.node_names[nid].decode() if isinstance(self.node_names[nid], bytes) else self.node_names[nid] for nid in node_ids]
+                logging.info("  constraint %s: type=%s, setting=%s, nodes=%s (%s)"
+                             % (name, ctype, setting, node_ids, node_names_list))
 
         logging.info("======== End YAML PyPlaceDB Summary ========")
 
@@ -711,6 +723,19 @@ class PlaceDB (object):
             self.num_routing_layers = 1
             self.unit_horizontal_capacity = params.unit_horizontal_capacity
             self.unit_vertical_capacity = params.unit_vertical_capacity
+
+        # constraints (PIC-specific)
+        self.num_constraints = pydb.num_constraints
+        if self.num_constraints > 0:
+            self.constraint_names = np.array(pydb.constraint_names, dtype=np.string_)
+            self.constraint_types = np.array(pydb.constraint_types, dtype=np.int32)
+            self.constraint_settings = np.array(pydb.constraint_settings, dtype=np.int32)
+            self.constraint_objects = pydb.constraint_objects
+            for i in range(len(self.constraint_objects)):
+                self.constraint_objects[i] = np.array(self.constraint_objects[i], dtype=np.int32)
+            self.constraint_objects = np.array(self.constraint_objects, dtype=object)
+            self.flat_constraint_objects = np.array(pydb.flat_constraint_objects, dtype=np.int32)
+            self.flat_constraint_objects_start = np.array(pydb.flat_constraint_objects_start, dtype=np.int32)
 
         # convert node2pin_map to array of array
         for i in range(len(self.node2pin_map)):
