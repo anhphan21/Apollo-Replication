@@ -14,6 +14,7 @@ add_subdirectory(weighted_average_wirelength)
 add_subdirectory(cos_weighted_average_wirelength)
 add_subdirectory(logsumexp_wirelength)
 add_subdirectory(fence_region)
+add_subdirectory(net_spacing)
 # legalization operators
 add_subdirectory(legality_check)
 add_subdirectory(macro_legalize)
