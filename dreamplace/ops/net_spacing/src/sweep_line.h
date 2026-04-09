@@ -9,11 +9,13 @@ template <typename T>
 class NetIntersector {
  public:
   struct Point {
+    Point(T x, T y) : x(x), y (y) {}
     T x, y;
   };
 
   struct Segment {
-    Segment(T x0, T y0, T x1, T y1) : p1(x0, y0), p2(x1, y1) {}
+    Segment(T x0, T y0, T x1, T y1, int idx) : p1(x0, y0), p2(x1, y1), id(idx) {}
+
     Point p1, p2;
     int id;
     int crossingCount = 0;
@@ -52,23 +54,6 @@ class NetIntersector {
     return false;
   }
 
-  double evaluateY(const Segment& s, T x) const {
-    if (s.p2.x == s.p1.x) return static_cast<double>(s.p1.y);
-    double slope = static_cast<double>(s.p2.y - s.p1.y) / static_cast<double>(s.p2.x - s.p1.x);
-    return static_cast<double>(s.p1.y) + slope * static_cast<double>(x - s.p1.x);
-  }
-
-  struct Event {
-    T x, y;
-    bool isLeftEndpoint;
-    Segment segment;
-
-    bool operator>(const Event& other) const {
-      if (x == other.x) return y > other.y;
-      return x > other.x;
-    }
-  };
-
  public:
   void calculateIntersections() {
     // Clear previous runs
@@ -76,74 +61,65 @@ class NetIntersector {
       net.crossingCount = 0;
     }
 
-    std::priority_queue<Event, std::vector<Event>, std::greater<Event>> eventQueue;
-    for (const auto& net : nets) {
-      Segment s = net;
-      if (s.p1.x > s.p2.x) std::swap(s.p1, s.p2);
-      eventQueue.push({s.p1.x, s.p1.y, true, s});
-      eventQueue.push({s.p2.x, s.p2.y, false, s});
-    }
+    // Sweep-line: when a segment's left endpoint is reached, check it
+    // against ALL currently active segments (not just immediate neighbors).
+    // This avoids the pitfall of the simplified Bentley-Ottmann that only
+    // checks neighbors — segments that are non-adjacent in y-order can
+    // still intersect, and a mutable comparator in std::set causes
+    // ordering inconsistencies after crossings.
 
-    T current_sweep_x;
-    auto activeCompare = [&current_sweep_x, this](const Segment& s1, const Segment& s2) {
-      double y1 = this->evaluateY(s1, current_sweep_x);
-      double y2 = this->evaluateY(s2, current_sweep_x);
-      if (y1 == y2) return s1.id < s2.id;
-      return y1 < y2;
+    struct Event {
+      T x;
+      int segIdx;       // index into nets
+      bool isLeft;      // true = left endpoint, false = right endpoint
+
+      bool operator>(const Event& other) const {
+        if (x == other.x) return !isLeft && other.isLeft;  // left before right at same x
+        return x > other.x;
+      }
     };
 
-    std::set<Segment, decltype(activeCompare)> activeSegments(activeCompare);
+    std::priority_queue<Event, std::vector<Event>, std::greater<Event>> eventQueue;
 
-    // Use a set to track unique pairs of crossing IDs
+    // Normalize so p1.x <= p2.x, then create events
+    for (int i = 0; i < static_cast<int>(nets.size()); ++i) {
+      if (nets[i].p1.x > nets[i].p2.x) std::swap(nets[i].p1, nets[i].p2);
+      eventQueue.push({nets[i].p1.x, i, true});
+      eventQueue.push({nets[i].p2.x, i, false});
+    }
+
+    // Track which segment indices are currently active
+    std::set<int> activeIndices;
+
+    // Track unique crossing pairs
     std::set<std::pair<int, int>> uniqueCrossings;
 
-    auto checkAndRecord = [&](const Segment& a, const Segment& b) {
-      if (doIntersect(a, b)) {
-        int id1 = std::min(a.id, b.id);
-        int id2 = std::max(a.id, b.id);
-        uniqueCrossings.insert({id1, id2});
-      }
-    };
-
     while (!eventQueue.empty()) {
-      Event currentEvent = eventQueue.top();
+      Event ev = eventQueue.top();
       eventQueue.pop();
 
-      current_sweep_x    = currentEvent.x;
-      Segment currentSeg = currentEvent.segment;
-
-      if (currentEvent.isLeftEndpoint) {
-        auto result = activeSegments.insert(currentSeg);
-        auto it     = result.first;
-
-        auto nextIt = std::next(it);
-        if (nextIt != activeSegments.end()) checkAndRecord(*it, *nextIt);
-
-        if (it != activeSegments.begin()) {
-          auto prevIt = std::prev(it);
-          checkAndRecord(*it, *prevIt);
-        }
-      } else {
-        auto it = activeSegments.find(currentSeg);
-        if (it != activeSegments.end()) {
-          auto nextIt  = std::next(it);
-          bool hasPrev = (it != activeSegments.begin());
-          if (hasPrev && nextIt != activeSegments.end()) {
-            checkAndRecord(*std::prev(it), *nextIt);
+      if (ev.isLeft) {
+        // Check new segment against all currently active segments
+        for (int ai : activeIndices) {
+          if (doIntersect(nets[ev.segIdx], nets[ai])) {
+            int id1 = std::min(nets[ev.segIdx].id, nets[ai].id);
+            int id2 = std::max(nets[ev.segIdx].id, nets[ai].id);
+            uniqueCrossings.insert({id1, id2});
           }
-          activeSegments.erase(it);
         }
+        activeIndices.insert(ev.segIdx);
+      } else {
+        activeIndices.erase(ev.segIdx);
       }
     }
 
-    // 4. Update the crossing counts in the master vector
+    // Update the crossing counts in the master vector
     for (const auto& pair : uniqueCrossings) {
-      // Find the nets by ID and increment their count
-      auto it1 = std::find_if(nets.begin(), nets.end(), [&](const Segment& s) { return s.id == pair.first; });
-      auto it2 = std::find_if(nets.begin(), nets.end(), [&](const Segment& s) { return s.id == pair.second; });
-
-      if (it1 != nets.end()) it1->crossingCount++;
-      if (it2 != nets.end()) it2->crossingCount++;
+      for (auto& net : nets) {
+        if (net.id == pair.first || net.id == pair.second) {
+          net.crossingCount++;
+        }
+      }
     }
   }
 

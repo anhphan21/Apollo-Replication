@@ -10,17 +10,21 @@ class NetCrossingCntWrapper : public NetIntersector<double> {
  public:
   NetCrossingCntWrapper(int num_thread) : num_threads(num_thread) {};
 
-  void initalizeNets(const T* x, const T* y, const int* netpin_start, int num_nets) {
+  void initializeNets(const T* x, const T* y, const int* netpin_start, int num_nets) {
+    nets.clear();
     nets.reserve(num_nets);
 
-    int chunk_size = DREAMPLACE_STD_NAMESPACE::max(int(num_nets / num_threads / 16), 1);
-#pragma omp parallel for num_threads(num_threads) schedule(dynamic, chunk_size)
+    // Sequential — emplace_back is not thread-safe
     for (int i = 0; i < num_nets; ++i)
-      nets.emplace_back(x[netpin_start[i]], y[netpin_start[i]], x[netpin_start[i] + 1], y[netpin_start[i] + 1]);
+      nets.emplace_back(x[netpin_start[i]], y[netpin_start[i]], x[netpin_start[i] + 1], y[netpin_start[i] + 1], i);
   }
 
   void updateNetCrossing(int numNets, int* net_crossing_cnt, const unsigned char* net_mask) {
-    assert(numNet == nets.size());
+    assert(numNets == static_cast<int>(nets.size()));
+
+    // Run sweep-line intersection detection
+    this->calculateIntersections();
+
     int chunk_size = DREAMPLACE_STD_NAMESPACE::max(int(numNets / num_threads / 16), 1);
 #pragma omp parallel for num_threads(num_threads) schedule(dynamic, chunk_size)
     for (int i = 0; i < numNets; ++i) {
@@ -88,7 +92,7 @@ int computeNetSpacingLauncher(const T* x,
 
   if (*update_crossing) {
     auto engine = NetCrossingCntWrapper<T>(num_threads);
-    engine.initalizeNets(x, y, netpin_start, num_nets);
+    engine.initializeNets(x, y, netpin_start, num_nets);
     engine.updateNetCrossing(num_nets, net_crossing_cnt, net_mask);
   }
 
@@ -108,21 +112,23 @@ int computeNetSpacingLauncher(const T* x,
     T si_1 = r_bend + 0.5 * node_num_ports[pin2node_map[p1_idx] + pin_side[p1_idx]] * s_crs;
     T s_i  = ((si_0 > si_1) ? si_0 : si_1) + s_crs * net_crossing_cnt[i];
 
-    T dx = DREAMPLACE_STD_NAMESPACE::fabs(x[p0_idx] - x[p1_idx]);
-    T dy = DREAMPLACE_STD_NAMESPACE::fabs(y[p0_idx] - y[p1_idx]);
+    T dx = x[p0_idx] - x[p1_idx];
+    T dy = y[p0_idx] - y[p1_idx];
 
     // Cal the NS
-    T relu_x = DREAMPLACE_STD_NAMESPACE::max(T(0), s_i - dx);
-    T relu_y = DREAMPLACE_STD_NAMESPACE::max(T(0), s_i - dy);
+    T relu_x = DREAMPLACE_STD_NAMESPACE::max(T(0), s_i - DREAMPLACE_STD_NAMESPACE::fabs(dx));
+    T relu_y = DREAMPLACE_STD_NAMESPACE::max(T(0), s_i - DREAMPLACE_STD_NAMESPACE::fabs(dy));
 
     if (relu_x > T(0)) {
-      grad_intermediate_x[p0_idx] = 2.0 * relu_x * (-1.0) * pin_dir_x[p0_idx];
-      grad_intermediate_x[p1_idx] = 2.0 * relu_x * (-1.0) * pin_dir_x[p1_idx];
+      T sign                      = (dx > T(0) ? -1.0 : 1.0);
+      grad_intermediate_x[p0_idx] = 2.0 * relu_x * pin_dir_x[p0_idx] * sign;
+      grad_intermediate_x[p1_idx] = 2.0 * relu_x * pin_dir_x[p1_idx] * sign;
     }
 
     if (relu_y > T(0)) {
-      grad_intermediate_y[p0_idx] = 2.0 * relu_y * (-1.0) * pin_dir_y[p0_idx];
-      grad_intermediate_y[p1_idx] = 2.0 * relu_y * (-1.0) * pin_dir_y[p1_idx];
+      T sign                      = (dy > T(0) ? -1.0 : 1.0);
+      grad_intermediate_y[p0_idx] = 2.0 * relu_y * pin_dir_y[p0_idx] * sign;
+      grad_intermediate_y[p1_idx] = 2.0 * relu_y * pin_dir_y[p1_idx] * sign;
     }
 
     partial_net_spacing[i] = relu_x * relu_x + relu_y * relu_y;
@@ -284,9 +290,44 @@ at::Tensor net_spacing_backward(at::Tensor grad_pos,
   return grad_out;
 }
 
+/// @brief Compute net crossing counts using sweep-line algorithm.
+/// @param pos pin locations (x array, y array), length 2*num_pins.
+/// @param flat_netpin flat netpin map.
+/// @param netpin_start starting index per net, length num_nets+1.
+/// @param net_mask whether to compute crossing per net.
+/// @return per-net crossing count tensor (int32).
+at::Tensor compute_net_crossing(at::Tensor pos, at::Tensor flat_netpin, at::Tensor netpin_start, at::Tensor net_mask) {
+  CHECK_FLAT_CPU(pos);
+  CHECK_EVEN(pos);
+  CHECK_CONTIGUOUS(pos);
+  CHECK_FLAT_CPU(flat_netpin);
+  CHECK_CONTIGUOUS(flat_netpin);
+  CHECK_FLAT_CPU(netpin_start);
+  CHECK_CONTIGUOUS(netpin_start);
+  CHECK_FLAT_CPU(net_mask);
+  CHECK_CONTIGUOUS(net_mask);
+
+  int num_nets = netpin_start.numel() - 1;
+  int num_pins = pos.numel() / 2;
+
+  at::Tensor net_crossing_cnt = at::zeros({num_nets}, at::TensorOptions().dtype(at::kInt));
+
+  DREAMPLACE_DISPATCH_FLOATING_TYPES(pos, "compute_net_crossing", [&] {
+    auto engine = NetCrossingCntWrapper<scalar_t>(at::get_num_threads());
+    engine.initializeNets(DREAMPLACE_TENSOR_DATA_PTR(pos, scalar_t),
+                          DREAMPLACE_TENSOR_DATA_PTR(pos, scalar_t) + num_pins,
+                          DREAMPLACE_TENSOR_DATA_PTR(netpin_start, int),
+                          num_nets);
+    engine.updateNetCrossing(num_nets, DREAMPLACE_TENSOR_DATA_PTR(net_crossing_cnt, int), DREAMPLACE_TENSOR_DATA_PTR(net_mask, unsigned char));
+  });
+
+  return net_crossing_cnt;
+}
+
 DREAMPLACE_END_NAMESPACE
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("forward", &DREAMPLACE_NAMESPACE::net_spacing_forward, "NetSpacing forward");
   m.def("backward", &DREAMPLACE_NAMESPACE::net_spacing_backward, "NetSpacing backward");
+  m.def("compute_net_crossing", &DREAMPLACE_NAMESPACE::compute_net_crossing, "Compute net crossing counts");
 }

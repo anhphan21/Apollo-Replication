@@ -10,7 +10,8 @@
 
 # Task 2
 - Target: check the crossing module in the `net_spacing` model
-- write the python test module to test the number of crossing 
+- write the python test module to test the number of crossing via the net_spacing module.
+- can create the new function in the `net_spacing` to parse the number of crossing to check
 
 # Task 3
 - Target: create python test code to verify the module.
