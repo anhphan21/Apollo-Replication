@@ -145,7 +145,7 @@ int computeCosWeightedAverageWirelengthMergedLauncher(const T* x,
       T cos1  = (dx * pin_dir_x[p1] + dy * pin_dir_y[p1]) * inv_r;
       T relu1 = DREAMPLACE_STD_NAMESPACE::max(T(0), c - cos1);
 
-      T cos2  = (dx * pin_dir_x[p2] + dy * pin_dir_y[p2]) * inv_r;
+      T cos2  = (-dx * pin_dir_x[p2] - dy * pin_dir_y[p2]) * inv_r;
       T relu2 = DREAMPLACE_STD_NAMESPACE::max(T(0), c - cos2);
 
       W_theta = relu1 * relu1 + relu2 * relu2;
