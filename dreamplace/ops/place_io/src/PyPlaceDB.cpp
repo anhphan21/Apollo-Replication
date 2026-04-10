@@ -174,9 +174,17 @@ void PyPlaceDB::set(PlaceDB const& db) {
     node_names.append(pybind11::str(name));
     node_x.append(box.xl());
     node_y.append(box.yl());
-    node_orient.append(pybind11::str(std::string(orient)));
-    node_size_x.append(box.width());
-    node_size_y.append(box.height());
+    // Store orientation as integer enum value (OrientEnum::OrientType) instead of string
+    node_orient.append(static_cast<int>(orient.value()));
+    // Rotate sizes by node orientation so node_size_x/y reflects the placed orientation.
+    // The incoming box dimensions are in the macro's N orientation; W/E (90/270 CW) swap w/h.
+    {
+      std::pair<int32_t, int32_t> df_node = getOrientDegreeFlip(orient.value());
+      std::pair<PlaceDB::coordinate_type, PlaceDB::coordinate_type> rs =
+          getRotatedSizes(df_node.first, box.width(), box.height());
+      node_size_x.append(rs.first);
+      node_size_y.append(rs.second);
+    }
     // map new node to original index
     node2orig_node_map.append(node.id());
     // record original node to new node mapping
@@ -338,28 +346,90 @@ void PyPlaceDB::set(PlaceDB const& db) {
     pin_name2id_map[pybind11::str(pin.name())] = i;
     // for fixed macros with multiple boxes, put all pins to the first one
     PlaceDB::index_type new_node_id = mNode2NewNodes.at(node.id()).at(0);
+
+    // Raw pin position is in the macro's N orientation (no rotation applied yet).
+    // We must rotate/flip both the pin offset and the port direction to match the
+    // current node orientation so that downstream consumers see consistent data.
     Pin::point_type pin_pos(node.pinPos(pin));
-    pin_offset_x.append(pin_pos.x() - node_x[new_node_id].cast<PlaceDB::coordinate_type>());
-    pin_offset_y.append(pin_pos.y() - node_y[new_node_id].cast<PlaceDB::coordinate_type>());
+    PlaceDB::coordinate_type raw_ox = pin_pos.x() - node_x[new_node_id].cast<PlaceDB::coordinate_type>();
+    PlaceDB::coordinate_type raw_oy = pin_pos.y() - node_y[new_node_id].cast<PlaceDB::coordinate_type>();
+
+    // Macro dimensions in N orientation (before any rotation that might
+    // already have been applied to node_size_x/y for non-yaml flow).
+    Macro const& macro      = db.macro(db.macroId(node));
+    PlaceDB::coordinate_type macro_w = macro.width();
+    PlaceDB::coordinate_type macro_h = macro.height();
+
+    // Decompose orient into rotation + flip
+    std::pair<int32_t, int32_t> df = getOrientDegreeFlip(node.orient());
+    int32_t degree = df.first;
+    int32_t flip   = df.second;
+
+    // Rotate the offset (CW by `degree`)
+    std::pair<PlaceDB::coordinate_type, PlaceDB::coordinate_type> rot =
+        getRotatedPinOffsets(degree, macro_w, macro_h, raw_ox, raw_oy);
+    PlaceDB::coordinate_type new_ox = rot.first;
+    PlaceDB::coordinate_type new_oy = rot.second;
+    // Apply flip about Y axis if needed
+    if (flip) {
+      std::pair<PlaceDB::coordinate_type, PlaceDB::coordinate_type> rotated_size =
+          getRotatedSizes(degree, macro_w, macro_h);
+      std::pair<PlaceDB::coordinate_type, PlaceDB::coordinate_type> fl =
+          getFlipYPinOffsets(rotated_size.first, rotated_size.second, new_ox, new_oy);
+      new_ox = fl.first;
+      new_oy = fl.second;
+    }
+
+    pin_offset_x.append(new_ox);
+    pin_offset_y.append(new_oy);
     pin2node_map.append(new_node_id);
     pin2net_map.append(db.getNet(pin).id());
 
-    // store port orientation for PIC
-    double portOrientAngle = pin.portOrient().toDouble();
-    pin_port_orient.append(portOrientAngle);
-
-    // count ports per physical side of the node
-    // determine side by which edge the pin offset is closest to
+    // Compute pin_dir_x/y considering node orientation.
+    // For yaml (PIC) input: rotate the macro pin's port angle by the node orientation.
+    // For non-yaml input: no port direction information -> (0, 0).
+    // Output unit vector is one of {(1,0), (-1,0), (0,1), (0,-1), (0,0)}.
     {
-      PlaceDB::coordinate_type ox = pin_pos.x() - node_x[new_node_id].cast<PlaceDB::coordinate_type>();
-      PlaceDB::coordinate_type oy = pin_pos.y() - node_y[new_node_id].cast<PlaceDB::coordinate_type>();
-      PlaceDB::coordinate_type nw = node.width();
-      PlaceDB::coordinate_type nh = node.height();
+      double dx_d = 0.0;
+      double dy_d = 0.0;
+      if (is_yaml_input) {
+        MacroPin const& mpin = macro.macroPin(pin.macroPinId());
+        float port_angle = mpin.portOrientAngle();  // 0/90/180/270, -1 if unknown
+        if (port_angle >= 0.0f) {
+          int port_deg = static_cast<int>(port_angle) % 360;
+          if (port_deg < 0) port_deg += 360;
+          // Combine port angle with node orientation:
+          //   final_angle = (port_deg - degree) mod 360   (subtract because `degree` is CW rotation)
+          int final_deg = ((port_deg - degree) % 360 + 360) % 360;
+          switch (final_deg) {
+            case 0:   dx_d =  1.0; dy_d =  0.0; break;
+            case 90:  dx_d =  0.0; dy_d =  1.0; break;
+            case 180: dx_d = -1.0; dy_d =  0.0; break;
+            case 270: dx_d =  0.0; dy_d = -1.0; break;
+            default:  dx_d =  1.0; dy_d =  0.0; break;  // shouldn't happen
+          }
+          // Apply flip about Y axis (flips x component)
+          if (flip) {
+            dx_d = -dx_d;
+          }
+        }
+      }
+      pin_dir_x.append(dx_d);
+      pin_dir_y.append(dy_d);
+    }
 
-      PlaceDB::coordinate_type dLeft  = ox;       // distance to left edge
-      PlaceDB::coordinate_type dRight = nw - ox;  // distance to right edge
-      PlaceDB::coordinate_type dLower = oy;       // distance to lower edge
-      PlaceDB::coordinate_type dUpper = nh - oy;  // distance to upper edge
+    // count ports per physical side of the node — uses TRANSFORMED offsets and
+    // the rotated node size, so the side reflects the actual placed orientation.
+    {
+      std::pair<PlaceDB::coordinate_type, PlaceDB::coordinate_type> rotated_size =
+          getRotatedSizes(degree, macro_w, macro_h);
+      PlaceDB::coordinate_type nw = rotated_size.first;
+      PlaceDB::coordinate_type nh = rotated_size.second;
+
+      PlaceDB::coordinate_type dLeft  = new_ox;       // distance to left edge
+      PlaceDB::coordinate_type dRight = nw - new_ox;  // distance to right edge
+      PlaceDB::coordinate_type dLower = new_oy;       // distance to lower edge
+      PlaceDB::coordinate_type dUpper = nh - new_oy;  // distance to upper edge
 
       // find the minimum distance to determine which side
       PlaceDB::coordinate_type dMin = dLeft;
@@ -598,43 +668,35 @@ void PyPlaceDB::set(PlaceDB const& db) {
   }
   flat_constraint_objects_start.append(count);
 
-  if (!db.isYamlDesign()) convertOrient();
+  // Note: orientation transforms are now applied inline in addNode (sizes)
+  // and the pin loop above (pin offsets, pin_dir), so convertOrient() is no
+  // longer needed for either yaml or non-yaml inputs.
 
-  // must be called after conversion of orientations
   computeAreaStatistics();
 }
 
-std::pair<int32_t, int32_t> PyPlaceDB::getOrientDegreeFlip(std::string const& orient) const {
+std::pair<int32_t, int32_t> PyPlaceDB::getOrientDegreeFlip(OrientEnum::OrientType orient) const {
   int32_t degree = 0;
   int32_t flip   = 0;
-  if (orient == "N") {
-    degree = 0;
-    flip   = 0;
-  } else if (orient == "S") {
-    degree = 180;
-    flip   = 0;
-  } else if (orient == "W") {
-    degree = 90;
-    flip   = 0;
-  } else if (orient == "E") {
-    degree = 270;
-    flip   = 0;
-  } else if (orient == "FN") {
-    degree = 0;
-    flip   = 1;
-  } else if (orient == "FS") {
-    degree = 180;
-    flip   = 1;
-  } else if (orient == "FW") {
-    degree = 90;
-    flip   = 1;
-  } else if (orient == "FE") {
-    degree = 270;
-    flip   = 1;
-  } else  // asssume UNKNOWN is N
-  {
-    degree = 0;
-    flip   = 0;
+  switch (orient) {
+    case OrientEnum::N:
+      degree = 0;   flip = 0; break;
+    case OrientEnum::S:
+      degree = 180; flip = 0; break;
+    case OrientEnum::W:
+      degree = 90;  flip = 0; break;
+    case OrientEnum::E:
+      degree = 270; flip = 0; break;
+    case OrientEnum::FN:
+      degree = 0;   flip = 1; break;
+    case OrientEnum::FS:
+      degree = 180; flip = 1; break;
+    case OrientEnum::FW:
+      degree = 90;  flip = 1; break;
+    case OrientEnum::FE:
+      degree = 270; flip = 1; break;
+    default:  // UNKNOWN -> assume N
+      degree = 0;   flip = 0; break;
   }
   return std::make_pair(degree, flip);
 }
@@ -710,19 +772,16 @@ std::pair<PyPlaceDB::coordinate_type, PyPlaceDB::coordinate_type> PyPlaceDB::get
 
 void PyPlaceDB::convertOrient() {
   dreamplacePrint(kINFO, "-- Converting Node Orientation --\n");
-  std::map<std::string, int32_t> orient_count;
+  std::map<int32_t, int32_t> orient_count;
   // ignore initial orientations for movable nodes
   for (unsigned int node_id = num_nodes - num_terminals - num_terminal_NIs; node_id < node_orient.size(); ++node_id) {
-    std::string src_orient = node_orient[node_id].cast<std::string>();
-    if (src_orient != "N" && src_orient != "UNKNOWN") {
+    OrientEnum::OrientType src_orient = static_cast<OrientEnum::OrientType>(node_orient[node_id].cast<int>());
+    if (src_orient != OrientEnum::N && src_orient != OrientEnum::UNKNOWN) {
       // count how many nodes converted
-      if (orient_count.find(src_orient) == orient_count.end()) {
-        orient_count[src_orient] = 0;
-      }
-      orient_count[src_orient]++;
+      orient_count[static_cast<int32_t>(src_orient)]++;
 
       // convert orientation to rotation degree and flipping Y
-      std::pair<int32_t, int32_t> dst_degree_flip = getOrientDegreeFlip("N");
+      std::pair<int32_t, int32_t> dst_degree_flip = getOrientDegreeFlip(OrientEnum::N);
       std::pair<int32_t, int32_t> src_degree_flip = getOrientDegreeFlip(src_orient);
 
       // compute rotation degree and flipping Y
@@ -773,8 +832,8 @@ void PyPlaceDB::convertOrient() {
     }
   }
 
-  for (std::map<std::string, int32_t>::const_iterator it = orient_count.begin(); it != orient_count.end(); ++it) {
-    dreamplacePrint(kINFO, "%s -> N: %d nodes\n", it->first.c_str(), it->second);
+  for (std::map<int32_t, int32_t>::const_iterator it = orient_count.begin(); it != orient_count.end(); ++it) {
+    dreamplacePrint(kINFO, "orient(%d) -> N: %d nodes\n", it->first, it->second);
   }
   dreamplacePrint(kINFO, "---------------------------------\n");
 }

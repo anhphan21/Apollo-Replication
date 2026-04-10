@@ -22,11 +22,13 @@ if sys.version_info[0] < 3:
 else:
     import _pickle as pickle
 import dreamplace.ops.weighted_average_wirelength.weighted_average_wirelength as weighted_average_wirelength
+import dreamplace.ops.cos_weighted_average_wirelength.cos_weighted_average_wirelength as cos_weighted_average_wirelength
 import dreamplace.ops.logsumexp_wirelength.logsumexp_wirelength as logsumexp_wirelength
 import dreamplace.ops.density_overflow.density_overflow as density_overflow
 import dreamplace.ops.electric_potential.electric_overflow as electric_overflow
 import dreamplace.ops.electric_potential.electric_potential as electric_potential
 import dreamplace.ops.density_potential.density_potential as density_potential
+import dreamplace.ops.net_spacing as net_spacing
 import dreamplace.ops.rudy.rudy as rudy
 import dreamplace.ops.pin_utilization.pin_utilization as pin_utilization
 import dreamplace.ops.nctugr_binary.nctugr_binary as nctugr_binary
@@ -220,9 +222,20 @@ class PlaceObj(nn.Module):
             self.op_collections.wirelength_op, self.op_collections.update_gamma_op = self.build_logsumexp_wl(
                 params, placedb, self.data_collections,
                 self.op_collections.pin_pos_op)
+        elif global_place_params["wirelength"] == "cos_weighted_average":
+            self.op_collections.wirelength_op, self.op_collections.update_gamma_op = self.build_cos_weighted_average_wl(
+                param, placedb, self.data_collections,
+                self.op_collections.pin_pos_op
+            )
         else:
             assert 0, "unknown wirelength model %s" % (
                 global_place_params["wirelength"])
+
+        # PIC-specific ops: cosine-weighted wirelength and net spacing
+        if self.data_collections.is_yaml_input:
+            self.op_collections.net_spacing_op, self.op_collections.update_crossing_op = self.build_net_spacing(
+                params, placedb, self.data_collections,
+                self.op_collections.pin_pos_op)
 
         self.op_collections.density_overflow_op = self.build_electric_overflow(
             params,
@@ -316,6 +329,11 @@ class PlaceObj(nn.Module):
             result = self.wirelength + self.density_weight.dot(self.density)
         else:
             result = torch.add(self.wirelength, self.density, alpha=(self.density_factor * self.density_weight).item())
+
+        # PIC: add net spacing penalty for YAML designs
+        if self.placedb.is_yaml_input:
+            self.net_spacing = self.op_collections.net_spacing_op(pos)
+            result = result + 1.0 * self.net_spacing
 
         return result
 
@@ -519,6 +537,82 @@ class PlaceObj(nn.Module):
             #logging.debug("update gamma to %g" % (wirelength_for_pin_op.gamma.data))
 
         return build_wirelength_op, build_update_gamma_op
+
+    def build_cos_weighted_average_wl(self, params, placedb, data_collections,
+                                       pin_pos_op):
+        """
+        @brief build the op to compute cosine-weighted average wirelength
+        @param params parameters
+        @param placedb placement database
+        @param data_collections a collection of data and variables required for constructing ops
+        @param pin_pos_op the op to compute pin locations according to cell locations
+        """
+        num_pins = len(data_collections.pin_dir) // 2
+        pin_dir_x = data_collections.pin_dir[:num_pins]
+        pin_dir_y = data_collections.pin_dir[num_pins:]
+
+        wirelength_for_pin_op = cos_weighted_average_wirelength.CosWeightedAverageWirelength(
+            flat_netpin=data_collections.flat_net2pin_map,
+            netpin_start=data_collections.flat_net2pin_start_map,
+            pin2net_map=data_collections.pin2net_map,
+            net_weights=data_collections.net_weights,
+            net_mask=data_collections.net_mask_ignore_large_degrees,
+            pin_mask=data_collections.pin_mask_ignore_fixed_macros,
+            gamma=self.gamma,
+            pin_dir_x=pin_dir_x,
+            pin_dir_y=pin_dir_y,
+            c=0.5,
+            alpha=1.4)
+
+        # wirelength for position
+        def build_wirelength_op(pos):
+            return wirelength_for_pin_op(pin_pos_op(pos))
+
+        # update gamma
+        base_gamma = self.base_gamma(params, placedb)
+
+        def build_update_gamma_op(iteration, overflow):
+            self.update_gamma(iteration, overflow, base_gamma)
+
+        return build_wirelength_op, build_update_gamma_op
+
+    def build_net_spacing(self, params, placedb, data_collections, pin_pos_op):
+        """
+        @brief build the op to compute net spacing penalty
+        @param params parameters
+        @param placedb placement database
+        @param data_collections a collection of data and variables required for constructing ops
+        @param pin_pos_op the op to compute pin locations according to cell locations
+        """
+        dtype = data_collections.pos[0].dtype
+        device = data_collections.pos[0].device
+        bend_radii = torch.tensor([5.0], dtype=dtype, device=device)
+        cross_size = torch.tensor([5.0], dtype=dtype, device=device)
+
+        net_spacing_op = net_spacing.net_spacing.NetSpacing(
+            flat_netpin=data_collections.flat_net2pin_map,
+            netpin_start=data_collections.flat_net2pin_start_map,
+            pin2net_map=data_collections.pin2net_map,
+            pin2node_map=data_collections.pin2node_map,
+            net_weights=data_collections.net_weights,
+            net_mask=data_collections.net_mask_ignore_large_degrees,
+            pin_mask=data_collections.pin_mask_ignore_fixed_macros,
+            pin_dir=data_collections.pin_dir,
+            pin_side=data_collections.pin_side,
+            node_num_ports=data_collections.node_num_ports,
+            bend_radii=bend_radii,
+            cross_size=cross_size)
+
+        def build_net_spacing_op(pos):
+            return net_spacing_op(pin_pos_op(pos))
+
+        def build_update_crossing_op(pos):
+            net_spacing_op.update_crossing.fill_(True)
+            result = net_spacing_op(pin_pos_op(pos))
+            net_spacing_op.update_crossing.fill_(False)
+            return net_spacing_op.net_crossing_cnt
+
+        return build_net_spacing_op, build_update_crossing_op
 
     def build_density_overflow(self, params, placedb, data_collections,
                                num_bins_x, num_bins_y):

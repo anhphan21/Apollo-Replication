@@ -138,6 +138,27 @@ class PlaceDataCollection(object):
 
             self.net_weights = torch.from_numpy(placedb.net_weights).to(device)
 
+            # PIC-specific: pin_side, pin_dir, node_num_ports
+            if placedb.pin_side is not None:
+                self.pin_side = torch.from_numpy(placedb.pin_side).to(device)
+            else:
+                self.pin_side = None
+            if placedb.pin_dir_x is not None and placedb.pin_dir_y is not None:
+                # Concatenate pin_dir_x and pin_dir_y into a single 1D tensor
+                # following the same layout as `pos` (x first then y),
+                # so that downstream ops (e.g. cos_weighted_average) can
+                # consume it the same way.
+                self.pin_dir = torch.tensor(
+                    np.concatenate([placedb.pin_dir_x, placedb.pin_dir_y]),
+                    dtype=self.pos[0].dtype,
+                    device=device)
+            else:
+                self.pin_dir = None
+            if placedb.node_num_ports is not None:
+                self.node_num_ports = torch.from_numpy(placedb.node_num_ports).to(device)
+            else:
+                self.node_num_ports = None
+
             # regions
             self.flat_region_boxes = torch.from_numpy(
                 placedb.flat_region_boxes).to(device)
@@ -247,7 +268,11 @@ class PlaceOpCollection(object):
         self.pin_utilization_map_op = None
         self.nctugr_congestion_map_op = None
         self.adjust_node_area_op = None
-        self.gift_init_op = None 
+        self.gift_init_op = None
+        self.cos_weighted_average_wl_op = None
+        self.update_cos_gamma_op = None
+        self.net_spacing_op = None
+        self.update_crossing_op = None
 
 
 class BasicPlace(nn.Module):
@@ -528,41 +553,41 @@ class BasicPlace(nn.Module):
 
         return pws_op
 
-    def build_rmst_wl(self, params, placedb, pin_pos_op, device):
-        """
-        @brief compute rectilinear minimum spanning tree wirelength with flute
-        @param params parameters
-        @param placedb placement database
-        @param pin_pos_op the op to compute pin locations according to cell locations
-        @param device cpu or cuda
-        """
-        # wirelength cost
+    # def build_rmst_wl(self, params, placedb, pin_pos_op, device):
+    #     """
+    #     @brief compute rectilinear minimum spanning tree wirelength with flute
+    #     @param params parameters
+    #     @param placedb placement database
+    #     @param pin_pos_op the op to compute pin locations according to cell locations
+    #     @param device cpu or cuda
+    #     """
+    #     # wirelength cost
 
-        POWVFILE = os.path.abspath(
-            os.path.join(os.path.dirname(__file__),
-                         "../../thirdparty/NCTUgr.ICCAD2012/POWV9.dat"))
-        POSTFILE = os.path.abspath(
-            os.path.join(os.path.dirname(__file__),
-                         "../../thirdparty/NCTUgr.ICCAD2012/POST9.dat"))
-        logging.info("POWVFILE = %s" % (POWVFILE))
-        logging.info("POSTFILE = %s" % (POSTFILE))
-        wirelength_for_pin_op = rmst_wl.RMSTWL(
-            flat_netpin=torch.from_numpy(placedb.flat_net2pin_map).to(device),
-            netpin_start=torch.from_numpy(
-                placedb.flat_net2pin_start_map).to(device),
-            ignore_net_degree=params.ignore_net_degree,
-            POWVFILE=POWVFILE,
-            POSTFILE=POSTFILE)
+    #     POWVFILE = os.path.abspath(
+    #         os.path.join(os.path.dirname(__file__),
+    #                      "../../thirdparty/NCTUgr.ICCAD2012/POWV9.dat"))
+    #     POSTFILE = os.path.abspath(
+    #         os.path.join(os.path.dirname(__file__),
+    #                      "../../thirdparty/NCTUgr.ICCAD2012/POST9.dat"))
+    #     logging.info("POWVFILE = %s" % (POWVFILE))
+    #     logging.info("POSTFILE = %s" % (POSTFILE))
+    #     wirelength_for_pin_op = rmst_wl.RMSTWL(
+    #         flat_netpin=torch.from_numpy(placedb.flat_net2pin_map).to(device),
+    #         netpin_start=torch.from_numpy(
+    #             placedb.flat_net2pin_start_map).to(device),
+    #         ignore_net_degree=params.ignore_net_degree,
+    #         POWVFILE=POWVFILE,
+    #         POSTFILE=POSTFILE)
 
-        # wirelength for position
-        def build_wirelength_op(pos):
-            pin_pos = pin_pos_op(pos)
-            wls = wirelength_for_pin_op(pin_pos.clone().cpu(),
-                                        self.read_lut_flag)
-            self.read_lut_flag = False
-            return wls
+    #     # wirelength for position
+    #     def build_wirelength_op(pos):
+    #         pin_pos = pin_pos_op(pos)
+    #         wls = wirelength_for_pin_op(pin_pos.clone().cpu(),
+    #                                     self.read_lut_flag)
+    #         self.read_lut_flag = False
+    #         return wls
 
-        return build_wirelength_op
+    #     return build_wirelength_op
 
     def build_timing_op(self, params, placedb, timer=None):
         """

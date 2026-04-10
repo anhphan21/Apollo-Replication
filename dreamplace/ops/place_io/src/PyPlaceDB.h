@@ -13,6 +13,7 @@
 #include <pybind11/numpy.h>
 //#include <boost/timer/timer.hpp>
 #include "PlaceDB.h"
+#include "Enums.h"
 #include "Iterators.h"
 #include "utility/src/torch.h"
 
@@ -36,20 +37,21 @@ struct PyPlaceDB
     unsigned int num_terminal_NIs; ///< number of terminal_NIs, essentially IO pins 
     pybind11::dict node_name2id_map; ///< node name to id map, cell name 
     pybind11::list node_names; ///< 1D array, cell name 
-    pybind11::list node_x; ///< 1D array, cell position x 
-    pybind11::list node_y; ///< 1D array, cell position y 
-    pybind11::list node_orient; ///< 1D array, cell orientation 
-    pybind11::list node_size_x; ///< 1D array, cell width  
+    pybind11::list node_x; ///< 1D array, cell position x
+    pybind11::list node_y; ///< 1D array, cell position y
+    pybind11::list node_orient; ///< 1D array, cell orientation as int (OrientEnum::OrientType value)
+    pybind11::list node_size_x; ///< 1D array, cell width
     pybind11::list node_size_y; ///< 1D array, cell height
 
     pybind11::list node2orig_node_map; ///< due to some fixed nodes may have non-rectangular shapes, we flat the node list; 
                                         ///< this map maps the new indices back to the original ones 
 
     pybind11::list pin_direct; ///< 1D array, pin direction IO
-    pybind11::list pin_offset_x; ///< 1D array, pin offset x to its node
-    pybind11::list pin_offset_y; ///< 1D array, pin offset y to its node
+    pybind11::list pin_offset_x; ///< 1D array, pin offset x to its node (after node orientation transform)
+    pybind11::list pin_offset_y; ///< 1D array, pin offset y to its node (after node orientation transform)
     pybind11::list pin_names; ///< pin name
-    pybind11::list pin_port_orient; ///< 1D array, pin port orientation (0.0, 90.0, 180.0, 270.0) for PIC
+    pybind11::list pin_dir_x; ///< 1D array, pin direction unit vector x component (after node orientation), one of {1, -1, 0}; 0 for non-yaml input
+    pybind11::list pin_dir_y; ///< 1D array, pin direction unit vector y component (after node orientation), one of {1, -1, 0}; 0 for non-yaml input
     pybind11::list pin_side; ///< 1D array, which side of the node each pin is on (PinSideEnum: 0=LEFT, 1=RIGHT, 2=LOWER, 3=UPPER)
 
     pybind11::list node_num_ports_left; ///< 1D array, number of ports on the left side per node
@@ -127,12 +129,12 @@ struct PyPlaceDB
 
     void set(PlaceDB const& db);
 
-    /// @brief Convert orientation to (degree, flip) pair. 
-    /// N, S, W, E correspond to degree = 0, 180, 90, 270, flip = 0; 
-    /// FN, FS, FW, FE correspond to degree = 0, 180, 90, 270, flip = 1. 
-    /// The operation is rotation and then flipping. 
-    /// Note flip means flipping about Y axis.  
-    std::pair<int32_t, int32_t> getOrientDegreeFlip(std::string const& orient) const; 
+    /// @brief Convert orientation to (degree, flip) pair.
+    /// N, S, W, E correspond to degree = 0, 180, 90, 270, flip = 0;
+    /// FN, FS, FW, FE correspond to degree = 0, 180, 90, 270, flip = 1.
+    /// The operation is rotation and then flipping.
+    /// Note flip means flipping about Y axis.
+    std::pair<int32_t, int32_t> getOrientDegreeFlip(OrientEnum::OrientType orient) const;
 
     /// @brief Get rotated width and height. 
     std::pair<coordinate_type, coordinate_type> getRotatedSizes(int32_t rot_degree, coordinate_type src_width, coordinate_type src_height) const; 

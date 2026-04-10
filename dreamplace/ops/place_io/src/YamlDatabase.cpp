@@ -56,6 +56,7 @@ void PlaceDB::yaml_macro_cbk(YamlParser::YamlMacro const& macro) {
 
     MacroPin& mPin = m.macroPin(insertPinRet.first);
     mPin.setDirect(SignalDirectEnum::INOUT);  // PIC pins are bidirectional by default
+    mPin.setPortOrientAngle(yamlPin.pin_orient);  // store port orientation from YAML library
 
     // create a port with offset-based bounding box
     index_type macroPortId = mPin.addMacroPort();
@@ -131,8 +132,6 @@ void PlaceDB::yaml_instance_cbk(YamlParser::YamlInstance const& inst) {
     return;
   }
 
-  std::cout << "Adding Instance: " << inst.name << "\n";
-
   // create and add node
   std::pair<index_type, bool> insertRet = addNode(inst.name);
   if (!insertRet.second) {
@@ -144,8 +143,6 @@ void PlaceDB::yaml_instance_cbk(YamlParser::YamlInstance const& inst) {
   NodeProperty& property = m_vNodeProperty.at(node.id());
   property.setMacroId(foundMacro->second);
   Macro const& macro = m_vMacro.at(property.macroId());
-
-  std::cout << "Found macro: " << macro.name() << "\n";
 
   // set position and size
   coordinate_type px = static_cast<coordinate_type>(inst.x);

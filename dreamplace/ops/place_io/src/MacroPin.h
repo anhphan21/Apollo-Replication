@@ -109,23 +109,29 @@ class MacroPin : public Object
         MacroPort const& macroPort(index_type id) const {return m_vMacroPort.at(id);}
         MacroPort& macroPort(index_type id) {return m_vMacroPort.at(id);}
 
-        /// add macro port and set index 
+        /// port orientation angle for PIC (0.0, 90.0, 180.0, 270.0)
+        float portOrientAngle() const {return m_portOrientAngle;}
+        MacroPin& setPortOrientAngle(float a) {m_portOrientAngle = a; return *this;}
+
+        /// add macro port and set index
         index_type addMacroPort();
     protected:
         void copy(MacroPin const& rhs);
 
-        std::string m_name; ///< pin name 
-        SignalDirect m_direct; ///< signal direction of pin 
-        box_type m_bbox; ///< bounding box of pin 
-        std::vector<MacroPort> m_vMacroPort; ///< ports in a pin 
+        std::string m_name; ///< pin name
+        SignalDirect m_direct; ///< signal direction of pin
+        box_type m_bbox; ///< bounding box of pin
+        std::vector<MacroPort> m_vMacroPort; ///< ports in a pin
+        float m_portOrientAngle; ///< port orientation angle for PIC (0.0, 90.0, 180.0, 270.0), -1 if unknown
 };
 
-inline MacroPin::MacroPin() 
+inline MacroPin::MacroPin()
     : MacroPin::base_type()
     , m_name("")
     , m_direct()
     , m_bbox()
     , m_vMacroPort()
+    , m_portOrientAngle(-1.0f)
 {
 }
 inline MacroPin::MacroPin(MacroPin const& rhs)
@@ -148,6 +154,7 @@ inline void MacroPin::copy(MacroPin const& rhs)
     m_direct = rhs.m_direct;
     m_bbox = rhs.m_bbox;
     m_vMacroPort = rhs.m_vMacroPort;
+    m_portOrientAngle = rhs.m_portOrientAngle;
 }
 
 inline MacroPin::index_type MacroPin::addMacroPort()

@@ -48,17 +48,18 @@ class PlaceDB (object):
         self.node_orient = None # 1D array, cell orientation
         self.node_size_x = None # 1D array, cell width
         self.node_size_y = None # 1D array, cell height
-        self.node_num_ports_left = None # 1D array, number of ports on the left side per node
-        self.node_num_ports_right = None # 1D array, number of ports on the right side per node
-        self.node_num_ports_lower = None # 1D array, number of ports on the lower side per node
-        self.node_num_ports_upper = None # 1D array, number of ports on the upper side per node
+        self.node_num_ports = None # 1D array, interleaved [left, right, lower, upper] per node
+                                    # access: node_num_ports[node_id * 4 + side] where side: 0=LEFT, 1=RIGHT, 2=LOWER, 3=UPPER
         self.node2orig_node_map = None # some fixed cells may have non-rectangular shapes; we flatten them and create new nodes
                                         # this map maps the current multiple node ids into the original one
 
         self.pin_direct = None # 1D array, pin direction IO
-        self.pin_offset_x = None # 1D array, pin offset x to its node
-        self.pin_offset_y = None # 1D array, pin offset y to its node
+        self.pin_offset_x = None # 1D array, pin offset x to its node (after node orientation transform)
+        self.pin_offset_y = None # 1D array, pin offset y to its node (after node orientation transform)
         self.pin_side = None # 1D array, which side of the node each pin is on (PinSide enum: 0=LEFT, 1=RIGHT, 2=LOWER, 3=UPPER)
+        self.pin_dir_x = None # 1D array, pin direction unit vector x component (after node orientation), one of {1, -1, 0}
+        self.pin_dir_y = None # 1D array, pin direction unit vector y component (after node orientation), one of {1, -1, 0}
+                              # 0 for non-yaml inputs (no port orientation info)
 
         self.net_name2id_map = {} # net name to id map
         self.net_names = None # net name
@@ -210,6 +211,15 @@ class PlaceDB (object):
             self.regions[i] -= box_shift_factor
             self.regions[i] *= scale_factor
 
+    # Mapping from OrientEnum::OrientType integer values to UCLA orientation strings.
+    # Mirrors the enum in dreamplace/ops/place_io/src/Enums.h:
+    #   N=0, S=1, W=2, E=3, FN=4, FS=5, FW=6, FE=7, UNKNOWN=8
+    _ORIENT_INT_TO_STR = {
+        0: 'N', 1: 'S', 2: 'W', 3: 'E',
+        4: 'FN', 5: 'FS', 6: 'FW', 7: 'FE', 8: 'N',
+    }
+    _ORIENT_STR_TO_INT = {v: k for k, v in _ORIENT_INT_TO_STR.items()}
+
     def sort(self):
         """
         @brief Sort net by degree.
@@ -241,6 +251,10 @@ class PlaceDB (object):
         self.pin_offset_y = self.pin_offset_y[pin_order]
         if self.pin_side is not None:
             self.pin_side = self.pin_side[pin_order]
+        if self.pin_dir_x is not None:
+            self.pin_dir_x = self.pin_dir_x[pin_order]
+        if self.pin_dir_y is not None:
+            self.pin_dir_y = self.pin_dir_y[pin_order]
         old2new_pin_id_map = np.zeros(len(pin_order), dtype=np.int32)
         for new_pin_id in range(len(pin_order)):
             old2new_pin_id_map[pin_order[new_pin_id]] = new_pin_id
@@ -513,7 +527,7 @@ class PlaceDB (object):
                             i,
                             self.node_size_x[i], self.node_size_y[i],
                             self.node_x[i], self.node_y[i],
-                            self.node_orient[i].decode() if isinstance(self.node_orient[i], bytes) else self.node_orient[i]))
+                            self._ORIENT_INT_TO_STR.get(int(self.node_orient[i]), 'N')))
 
         # pins
         logging.info("---- Pins ----")
@@ -525,17 +539,21 @@ class PlaceDB (object):
             direct = self.pin_direct[i].decode() if isinstance(self.pin_direct[i], bytes) else self.pin_direct[i]
             side_names = {0: "LEFT", 1: "RIGHT", 2: "LOWER", 3: "UPPER", 4: "UNKNOWN"}
             side_str = side_names.get(int(self.pin_side[i]), "UNKNOWN") if self.pin_side is not None else "N/A"
-            logging.info("  pin %s(%d): node=%s, net=%s, offset(%g, %g), direct=%s, side=%s"
+            dir_str = ""
+            if self.pin_dir_x is not None and self.pin_dir_y is not None:
+                dir_str = ", dir(%g, %g)" % (self.pin_dir_x[i], self.pin_dir_y[i])
+            logging.info("  pin %s(%d): node=%s, net=%s, offset(%g, %g), direct=%s, side=%s%s"
                          % (pin_name, i, node_name, net_name,
-                            self.pin_offset_x[i], self.pin_offset_y[i], direct, side_str))
+                            self.pin_offset_x[i], self.pin_offset_y[i], direct, side_str, dir_str))
 
         # node port counts per physical side (PIC-specific)
-        if self.node_num_ports_left is not None and len(self.node_num_ports_left) > 0:
+        if self.node_num_ports is not None and len(self.node_num_ports) > 0:
             logging.info("---- Node Port Counts by Side (PIC) ----")
-            for i in range(len(self.node_num_ports_left)):
+            for i in range(self.num_physical_nodes):
+                base = i * 4
                 logging.info("  node %d: left=%d, right=%d, lower=%d, upper=%d"
-                             % (i, self.node_num_ports_left[i], self.node_num_ports_right[i],
-                                self.node_num_ports_lower[i], self.node_num_ports_upper[i]))
+                             % (i, self.node_num_ports[base], self.node_num_ports[base + 1],
+                                self.node_num_ports[base + 2], self.node_num_ports[base + 3]))
 
         # nets
         logging.info("---- Nets ----")
@@ -645,27 +663,43 @@ class PlaceDB (object):
             if filename is not None and os.path.exists(filename):
                 self.node_x = np.zeros(self.num_physical_nodes, dtype=self.dtype)
                 self.node_y = np.zeros(self.num_physical_nodes, dtype=self.dtype)
-                self.node_orient = np.zeros(self.num_physical_nodes, dtype=np.string_)
+                # node_orient stored as int (OrientEnum::OrientType value); read_pl writes ints too
+                self.node_orient = np.zeros(self.num_physical_nodes, dtype=np.int32)
                 self.read_pl(params, filename)
                 use_read_pl_flag = True
         if not use_read_pl_flag:
             self.node_x = np.array(pydb.node_x, dtype=self.dtype)
             self.node_y = np.array(pydb.node_y, dtype=self.dtype)
-            self.node_orient = np.array(pydb.node_orient, dtype=np.string_)
+            # node_orient comes from C++ as int (OrientEnum::OrientType value);
+            # use the place_io.OrientEnum enum (e.g. place_io.OrientEnum.N) for comparisons.
+            self.node_orient = np.array(pydb.node_orient, dtype=np.int32)
         self.node_size_x = np.array(pydb.node_size_x, dtype=self.dtype)
         self.node_size_y = np.array(pydb.node_size_y, dtype=self.dtype)
         self.node2orig_node_map = np.array(pydb.node2orig_node_map, dtype=np.int32)
-        
+
         self.pin_direct = np.array(pydb.pin_direct, dtype=np.string_)
+        # pin_offset_x/y already include node-orientation transform (done in C++ PyPlaceDB).
         self.pin_offset_x = np.array(pydb.pin_offset_x, dtype=self.dtype)
         self.pin_offset_y = np.array(pydb.pin_offset_y, dtype=self.dtype)
         self.pin_names = np.array(pydb.pin_names, dtype=np.string_)
+        # pin_side reflects the placed orientation (computed in C++ from rotated offsets).
         self.pin_side = np.array(pydb.pin_side, dtype=np.int32)
+        self.pin2node_map = np.array(pydb.pin2node_map, dtype=np.int32)
+        # Pin direction unit vectors, considering node orientation.
+        # Layout: separate x and y arrays. Values are 1, -1, or 0 (0 for non-yaml input).
+        self.pin_dir_x = np.array(pydb.pin_dir_x, dtype=self.dtype)
+        self.pin_dir_y = np.array(pydb.pin_dir_y, dtype=self.dtype)
 
-        self.node_num_ports_left = np.array(pydb.node_num_ports_left, dtype=np.int32)
-        self.node_num_ports_right = np.array(pydb.node_num_ports_right, dtype=np.int32)
-        self.node_num_ports_lower = np.array(pydb.node_num_ports_lower, dtype=np.int32)
-        self.node_num_ports_upper = np.array(pydb.node_num_ports_upper, dtype=np.int32)
+        # Build unified node_num_ports from (already transformed) pin_side.
+        # Layout: 4 entries per node [left, right, lower, upper].
+        # Access via node_num_ports[node_id * 4 + side].
+        num_physical = self.num_physical_nodes
+        self.node_num_ports = np.zeros(num_physical * 4, dtype=np.int32)
+        for pin_idx in range(len(self.pin_side)):
+            node_id = self.pin2node_map[pin_idx]
+            if node_id < num_physical:
+                side = int(self.pin_side[pin_idx])
+                self.node_num_ports[node_id * 4 + side] += 1
 
         self.net_name2id_map = pydb.net_name2id_map
         self.pin_name2id_map = pydb.pin_name2id_map
@@ -681,7 +715,6 @@ class PlaceDB (object):
         self.node2pin_map = pydb.node2pin_map
         self.flat_node2pin_map = np.array(pydb.flat_node2pin_map, dtype=np.int32)
         self.flat_node2pin_start_map = np.array(pydb.flat_node2pin_start_map, dtype=np.int32)
-        self.pin2node_map = np.array(pydb.pin2node_map, dtype=np.int32)
         self.pin2net_map = np.array(pydb.pin2net_map, dtype=np.int32)
         self.rows = np.array(pydb.rows, dtype=self.dtype)
         self.regions = pydb.regions
@@ -1178,8 +1211,8 @@ row height = %g, site width = %g
                     node_id = self.node_name2id_map[pos.group(1)]
                     self.node_x[node_id] = float(pos.group(2))
                     self.node_y[node_id] = float(pos.group(6))
-                    self.node_orient[node_id] = pos.group(10)
-                    orient = pos.group(4)
+                    # convert orientation string (e.g. "N", "FW") to OrientEnum int value
+                    self.node_orient[node_id] = self._ORIENT_STR_TO_INT.get(pos.group(10), 0)
         if params.shift_factor[0] != 0 or params.shift_factor[1] != 0 or params.scale_factor != 1.0:
             self.scale_pl(params.shift_factor, params.scale_factor)
         logging.info("read_pl takes %.3f seconds" % (time.time()-tt))
@@ -1193,7 +1226,9 @@ row height = %g, site width = %g
         logging.info("writing to %s" % (pl_file))
         content = "UCLA pl 1.0\n"
         str_node_names = np.array(self.node_names).astype(np.str_)
-        str_node_orient = np.array(self.node_orient).astype(np.str_)
+        # convert int orientation values back to string for UCLA .pl format
+        str_node_orient = np.array(
+            [self._ORIENT_INT_TO_STR.get(int(o), 'N') for o in self.node_orient])
         for i in range(self.num_movable_nodes):
             content += "\n%s %g %g : %s" % (
                     str_node_names[i],

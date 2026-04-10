@@ -1480,6 +1480,8 @@ void PlaceDB::addPin(index_type macroPinId, Net& net, Node& node, std::string pi
   MacroPin const& mpin = macro.macroPin(macroPinId);
 
   // create and add pin
+  // Note: port orientation is stored on the MacroPin (mpin.portOrientAngle())
+  // and is read directly when populating PyPlaceDB; no per-instance copy needed.
   createPin(net, node, mpin.direct(), center(mpin.bbox()), macroPinId, pinName);
 }
 

@@ -46,10 +46,6 @@ class Pin : public Object
         SignalDirect const& direct() const {return m_direct;}
         Pin& setDirect(SignalDirect const& d) {m_direct = d; return *this;}
 
-        PortOrient const& portOrient() const {return m_portOrient;}
-        Pin& setPortOrient(PortOrient const& po) {m_portOrient = po; return *this;}
-        Pin& setPortOrientFromDouble(double angle) {m_portOrient = PortOrient::fromDouble(angle); return *this;}
-
         std::string name() const { return m_name; }
         Pin& setName(std::string const& n) { m_name = n; return *this; }
     protected:
@@ -60,7 +56,6 @@ class Pin : public Object
         index_type m_netId; ///< corresponding net
         point_type m_offset; ///< offset based on the origin of node
         SignalDirect m_direct; ///< direction of signal
-        PortOrient m_portOrient; ///< port orientation angle for PIC circuits (0, 90, 180, 270)
         std::string m_name; ///< name of this pin
 };
 
@@ -71,7 +66,6 @@ inline Pin::Pin()
     , m_netId(std::numeric_limits<Pin::index_type>::max())
     , m_offset()
     , m_direct()
-    , m_portOrient()
     , m_name()
 {
 }
@@ -96,7 +90,6 @@ inline void Pin::copy(Pin const& rhs)
     m_netId = rhs.m_netId;
     m_offset = rhs.m_offset;
     m_direct = rhs.m_direct;
-    m_portOrient = rhs.m_portOrient;
     m_name = rhs.m_name;
 }
 
