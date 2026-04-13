@@ -150,11 +150,13 @@ int computeCosWeightedAverageWirelengthMergedLauncher(const T* x,
 
       W_theta = relu1 * relu1 + relu2 * relu2;
 
-      // Gradient of cos(theta_k) w.r.t. pin positions:
-      // d cos_k / d x[p1] = (-vx_k + cos_k * dx/r) / r
-      // d cos_k / d x[p2] = ( vx_k - cos_k * dx/r) / r
-      // d cos_k / d y[p1] = (-vy_k + cos_k * dy/r) / r
-      // d cos_k / d y[p2] = ( vy_k - cos_k * dy/r) / r
+      // Gradient of cos1 (uses +dx,+dy) w.r.t. pin positions:
+      //   d cos1 / d x[p1] = (-vx1 + cos1 * dx/r) / r
+      //   d cos1 / d x[p2] = ( vx1 - cos1 * dx/r) / r
+      // Gradient of cos2 (uses -dx,-dy) — signs on vx,vy flip:
+      //   d cos2 / d x[p1] = (+vx2 + cos2 * dx/r) / r
+      //   d cos2 / d x[p2] = (-vx2 - cos2 * dx/r) / r
+      // (and analogously for y)
       //
       // d W_theta / d x = sum_k -2 * relu_k * d cos_k / d x  (when relu_k > 0)
 
@@ -172,10 +174,11 @@ int computeCosWeightedAverageWirelengthMergedLauncher(const T* x,
       }
 
       if (relu2 > T(0)) {
-        T dcos2_dx_p1 = (-pin_dir_x[p2] + cos2 * dx_ov_r) * inv_r;
-        T dcos2_dy_p1 = (-pin_dir_y[p2] + cos2 * dy_ov_r) * inv_r;
-        T dcos2_dx_p2 = (pin_dir_x[p2] - cos2 * dx_ov_r) * inv_r;
-        T dcos2_dy_p2 = (pin_dir_y[p2] - cos2 * dy_ov_r) * inv_r;
+        // cos2 uses (-dx, -dy), so d(-dx)/dx[p1] = +1 (opposite sign vs cos1)
+        T dcos2_dx_p1 = (pin_dir_x[p2] + cos2 * dx_ov_r) * inv_r;
+        T dcos2_dy_p1 = (pin_dir_y[p2] + cos2 * dy_ov_r) * inv_r;
+        T dcos2_dx_p2 = (-pin_dir_x[p2] - cos2 * dx_ov_r) * inv_r;
+        T dcos2_dy_p2 = (-pin_dir_y[p2] - cos2 * dy_ov_r) * inv_r;
 
         T coeff2 = -2 * relu2;
         dWt_dx_p1 += coeff2 * dcos2_dx_p1;

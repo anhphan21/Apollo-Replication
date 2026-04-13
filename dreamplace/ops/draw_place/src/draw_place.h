@@ -12,31 +12,37 @@ DREAMPLACE_BEGIN_NAMESPACE
 
 template <typename T>
 int drawPlaceLauncher(
-        const T* x_tensor, const T* y_tensor, 
-        const T* node_size_x_tensor, const T* node_size_y_tensor, 
-        const T* pin_offset_x_tensor, const T* pin_offset_y_tensor, 
-        const int* pin2node_map_tensor, 
-        const int num_nodes, 
-        const int num_movable_nodes, 
-        const int num_filler_nodes, 
-        const int num_pins, 
-        const T xl, const T yl, const T xh, const T yh, 
-        const T site_width, const T row_height, 
-        const T bin_size_x, const T bin_size_y, 
+        const T* x_tensor, const T* y_tensor,
+        const T* node_size_x_tensor, const T* node_size_y_tensor,
+        const T* pin_offset_x_tensor, const T* pin_offset_y_tensor,
+        const int* pin2node_map_tensor,
+        const int num_nodes,
+        const int num_movable_nodes,
+        const int num_filler_nodes,
+        const int num_pins,
+        const int* flat_net2pin_map_tensor,
+        const int* flat_net2pin_start_map_tensor,
+        const int num_nets,
+        const T xl, const T yl, const T xh, const T yh,
+        const T site_width, const T row_height,
+        const T bin_size_x, const T bin_size_y,
         const std::string& filename
         )
 {
     PlaceDrawer<T, int> drawer (
-            x_tensor, y_tensor, 
-            node_size_x_tensor, node_size_y_tensor, 
-            pin_offset_x_tensor, pin_offset_y_tensor, 
-            pin2node_map_tensor, 
-            num_nodes, 
-            num_movable_nodes, 
-            num_filler_nodes, 
-            num_pins, 
-            xl, yl, xh, yh, 
-            site_width, row_height, 
+            x_tensor, y_tensor,
+            node_size_x_tensor, node_size_y_tensor,
+            pin_offset_x_tensor, pin_offset_y_tensor,
+            pin2node_map_tensor,
+            num_nodes,
+            num_movable_nodes,
+            num_filler_nodes,
+            num_pins,
+            flat_net2pin_map_tensor,
+            flat_net2pin_start_map_tensor,
+            num_nets,
+            xl, yl, xh, yh,
+            site_width, row_height,
             bin_size_x, bin_size_y
             );
     typename PlaceDrawer<T, int>::FileFormat ff; 

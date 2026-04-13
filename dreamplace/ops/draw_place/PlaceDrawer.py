@@ -34,6 +34,8 @@ class PlaceDrawer(object):
                 bin_size_y,
                 num_movable_nodes,
                 num_filler_nodes,
+                flat_net2pin_map,
+                flat_net2pin_start_map,
                 filename,
                 iteration=None):
         """
@@ -235,6 +237,61 @@ class PlaceDrawer(object):
             #for i in range(num_nodes):
             #    ctx.move_to((node_xl[i]+node_xh[i])/2, (node_yl[i]+node_yh[i])/2)
             #    ctx.show_text("%d" % (i))
+
+            # compute pin positions (in layout coords, before y-flip)
+            flat_net2pin_map = np.array(flat_net2pin_map)
+            flat_net2pin_start_map = np.array(flat_net2pin_start_map)
+            num_pins = len(pin2node_map)
+            num_nets = len(flat_net2pin_start_map) - 1
+
+            pin_x_abs = np.zeros(num_pins)
+            pin_y_abs = np.zeros(num_pins)
+            for p in range(num_pins):
+                nid = pin2node_map[p]
+                pin_x_abs[p] = x[nid] + pin_offset_x[p]
+                pin_y_abs[p] = y[nid] + pin_offset_y[p]
+            # flip y for screen coords, then normalize
+            pin_sx = normalize_x(pin_x_abs)
+            pin_sy = normalize_y(layout_yl + layout_yh - pin_y_abs)
+
+            # draw net connections (lines between pins of each net)
+            # scale line width relative to cell size on screen
+            avg_cell_dim = min(site_width, row_height)
+            if avg_cell_dim <= 0:
+                avg_cell_dim = (xh - xl) / 100.0
+            net_line_width = max(normalize_x(xl + avg_cell_dim * 0.12) - normalize_x(xl), 0.5)
+            ctx.set_line_width(net_line_width)
+            # use a color cycle for nets
+            net_colors = [
+                (0.0, 0.6, 0.0, 0.4),   # green
+                (0.8, 0.4, 0.0, 0.4),   # orange
+                (0.5, 0.0, 0.5, 0.4),   # purple
+                (0.0, 0.5, 0.5, 0.4),   # teal
+                (0.6, 0.0, 0.0, 0.4),   # dark red
+                (0.0, 0.0, 0.6, 0.4),   # dark blue
+            ]
+            for net_id in range(num_nets):
+                start = flat_net2pin_start_map[net_id]
+                end = flat_net2pin_start_map[net_id + 1]
+                pins_in_net = flat_net2pin_map[start:end]
+                if len(pins_in_net) < 2:
+                    continue
+                color = net_colors[net_id % len(net_colors)]
+                ctx.set_source_rgba(*color)
+                # star topology: connect all pins to the centroid
+                cx = np.mean(pin_sx[pins_in_net])
+                cy = np.mean(pin_sy[pins_in_net])
+                for pid in pins_in_net:
+                    ctx.move_to(pin_sx[pid], pin_sy[pid])
+                    ctx.line_to(cx, cy)
+                ctx.stroke()
+
+            # draw pins as small filled circles
+            pin_radius = max(normalize_x(xl + min(site_width, row_height) / 6) - normalize_x(xl), 1.5)
+            ctx.set_source_rgba(0.8, 0.0, 0.0, 0.9)
+            for p in range(num_pins):
+                ctx.arc(pin_sx[p], pin_sy[p], pin_radius, 0, 2 * math.pi)
+                ctx.fill()
 
             # show iteration
             if iteration:

@@ -1631,7 +1631,6 @@ void PlaceDB::deriveMultiRowAttr(Node& node) {
 
   // currently there is no sign to tell whether a multi-row cell should align to
   // power line assume all even-row cells align to N/FN rows
-  std::cout << "Row macro: " << m_vRow.size() << "\n";
   if (node.height() == rowHeight())  // single-row cell, may be some fixed instances
     node.setMultiRowAttr(MultiRowAttrEnum::SINGLE_ROW);
   else if (node.status() == PlaceStatusEnum::FIXED)  // large fixed instances

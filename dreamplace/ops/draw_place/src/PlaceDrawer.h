@@ -20,6 +20,7 @@
 #endif
 
 #include <limbo/parsers/gdsii/stream/GdsWriter.h>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
@@ -49,7 +50,7 @@ class PlaceDrawer {
     NODETEXT = 2,
     PIN = 4,
     NET = 8,
-    ALL = NODE | NODETEXT | PIN | NET
+    ALL = NODE | NODETEXT
   };
   /// constructor
   PlaceDrawer(
@@ -58,7 +59,11 @@ class PlaceDrawer {
       const coordinate_type* pin_offset_x, const coordinate_type* pin_offset_y,
       const index_type* pin2node_map, const index_type num_nodes,
       const index_type num_movable_nodes, const index_type num_filler_nodes,
-      const index_type num_pins, const coordinate_type xl,
+      const index_type num_pins,
+      const index_type* flat_net2pin_map,
+      const index_type* flat_net2pin_start_map,
+      const index_type num_nets,
+      const coordinate_type xl,
       const coordinate_type yl, const coordinate_type xh,
       const coordinate_type yh, const coordinate_type site_width,
       const coordinate_type row_height, const coordinate_type bin_size_x,
@@ -74,6 +79,9 @@ class PlaceDrawer {
         m_num_movable_nodes(num_movable_nodes),
         m_num_filler_nodes(num_filler_nodes),
         m_num_pins(num_pins),
+        m_flat_net2pin_map(flat_net2pin_map),
+        m_flat_net2pin_start_map(flat_net2pin_start_map),
+        m_num_nets(num_nets),
         m_xl(xl),
         m_yl(yl),
         m_xh(xh),
@@ -234,6 +242,67 @@ class PlaceDrawer {
         }
       }
     }
+
+    // draw net connections (star topology: each pin to net centroid)
+    if ((m_content & NET) && m_flat_net2pin_map && m_flat_net2pin_start_map) {
+      // color cycle for nets
+      const double net_colors[][4] = {
+        {0.0, 0.6, 0.0, 0.4},  // green
+        {0.8, 0.4, 0.0, 0.4},  // orange
+        {0.5, 0.0, 0.5, 0.4},  // purple
+        {0.0, 0.5, 0.5, 0.4},  // teal
+        {0.6, 0.0, 0.0, 0.4},  // dark red
+        {0.0, 0.0, 0.6, 0.4},  // dark blue
+      };
+      const int num_colors = 6;
+      // scale line width relative to average cell dimension so nets are
+      // visible regardless of layout size
+      double avg_cell_dim = std::min((double)m_site_width, (double)m_row_height);
+      if (avg_cell_dim <= 0) avg_cell_dim = (m_xh - m_xl) / 100.0;
+      cairo_set_line_width(c, 50);
+      for (index_type net_id = 0; net_id < m_num_nets; ++net_id) {
+        index_type start = m_flat_net2pin_start_map[net_id];
+        index_type end = m_flat_net2pin_start_map[net_id + 1];
+        if (end - start < 2) continue;
+        // compute centroid of pins in this net
+        double cx = 0, cy = 0;
+        for (index_type j = start; j < end; ++j) {
+          index_type pin_id = m_flat_net2pin_map[j];
+          index_type node_id = m_pin2node_map[pin_id];
+          cx += m_x[node_id] + m_pin_offset_x[pin_id];
+          cy += m_y[node_id] + m_pin_offset_y[pin_id];
+        }
+        cx /= (end - start);
+        cy /= (end - start);
+        const double* color = net_colors[net_id % num_colors];
+        cairo_set_source_rgba(c, color[0], color[1], color[2], color[3]);
+        for (index_type j = start; j < end; ++j) {
+          index_type pin_id = m_flat_net2pin_map[j];
+          index_type node_id = m_pin2node_map[pin_id];
+          double px = m_x[node_id] + m_pin_offset_x[pin_id];
+          double py = m_y[node_id] + m_pin_offset_y[pin_id];
+          cairo_move_to(c, px, py);
+          cairo_line_to(c, cx, cy);
+        }
+        cairo_stroke(c);
+      }
+    }
+
+    // draw pins as small filled circles
+    if (m_content & PIN) {
+      double pin_radius = std::max(
+          std::min((double)m_site_width, (double)m_row_height) / 6.0,
+          (double)(m_xh - m_xl) / 800.0);
+      cairo_set_source_rgba(c, 0.8, 0.0, 0.0, 0.9);
+      for (index_type i = 0; i < m_num_pins; ++i) {
+        index_type node_id = m_pin2node_map[i];
+        double px = m_x[node_id] + m_pin_offset_x[i];
+        double py = m_y[node_id] + m_pin_offset_y[i];
+        cairo_arc(c, px, py, pin_radius, 0, 2 * M_PI);
+        cairo_fill(c);
+      }
+    }
+
     cairo_restore(c);
 
     cairo_show_page(c);
@@ -468,6 +537,9 @@ class PlaceDrawer {
   index_type m_num_movable_nodes;
   index_type m_num_filler_nodes;
   index_type m_num_pins;
+  const index_type* m_flat_net2pin_map;
+  const index_type* m_flat_net2pin_start_map;
+  index_type m_num_nets;
   coordinate_type m_xl;
   coordinate_type m_yl;
   coordinate_type m_xh;

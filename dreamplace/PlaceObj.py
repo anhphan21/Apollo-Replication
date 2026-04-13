@@ -329,10 +329,8 @@ class PlaceObj(nn.Module):
             ### density weight subgradient preconditioner
             self.density_weight_grad_precond = self.init_density.masked_scatter(self.init_density > 0, 1 /self.init_density[self.init_density > 0])
             self.quad_penalty_coeff = self.density_quad_coeff / 2 * self.density_weight_grad_precond
-        
         if self.quad_penalty:
             ### quadratic density penalty
-            print("Use quadratic penalty")
             self.density = self.density * (1 + self.quad_penalty_coeff * self.density)
 
         if len(self.placedb.regions) > 0:
@@ -426,7 +424,7 @@ class PlaceObj(nn.Module):
         @param pos locations of cells
         @return objective value
         """
-        #self.check_gradient(pos)
+        self.check_gradient(pos)
         if pos.grad is not None:
             pos.grad.zero_()
         obj = self.obj_fn(pos)
@@ -466,6 +464,16 @@ class PlaceObj(nn.Module):
 
         logging.info("wirelength_grad norm = %.6E" % (wirelength_grad_norm))
         logging.info("density_grad norm    = %.6E" % (density_grad_norm))
+
+        # PIC: check net spacing gradient
+        if self.placedb.is_yaml_input:
+            pos.grad.zero_()
+            net_spacing = self.op_collections.net_spacing_op(pos)
+            net_spacing.backward()
+            net_spacing_grad = pos.grad.clone()
+            net_spacing_grad_norm = net_spacing_grad.norm(p=1)
+            logging.info("net_spacing_grad norm = %.6E" % (net_spacing_grad_norm))
+
         pos.grad.zero_()
 
     def estimate_initial_learning_rate(self, x_k, lr):

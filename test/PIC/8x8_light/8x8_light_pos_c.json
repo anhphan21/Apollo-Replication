@@ -16,6 +16,7 @@
             "routability_Lsub_iteration": 5
         }
     ],
+    "macro_place_flag": 0,
     "target_density": 0.9,
     "density_weight": 8e-5,
     "gamma": 4.0,

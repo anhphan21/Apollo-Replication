@@ -35,12 +35,16 @@ int draw_place_forward(at::Tensor pos, at::Tensor node_size_x,
                        double xl, double yl, double xh, double yh,
                        double site_width, double row_height, double bin_size_x,
                        double bin_size_y, int num_movable_nodes,
-                       int num_filler_nodes, const std::string& filename) {
+                       int num_filler_nodes,
+                       at::Tensor flat_net2pin_map,
+                       at::Tensor flat_net2pin_start_map,
+                       const std::string& filename) {
   CHECK_FLAT_CPU(pos);
   CHECK_EVEN(pos);
   CHECK_CONTIGUOUS(pos);
 
   int num_nodes = pos.numel() / 2;
+  int num_nets = flat_net2pin_start_map.numel() - 1;
 
   // Call the kernel launcher
   int ret = 0;
@@ -53,7 +57,11 @@ int draw_place_forward(at::Tensor pos, at::Tensor node_size_x,
         DREAMPLACE_TENSOR_DATA_PTR(pin_offset_x, scalar_t),
         DREAMPLACE_TENSOR_DATA_PTR(pin_offset_y, scalar_t),
         DREAMPLACE_TENSOR_DATA_PTR(pin2node_map, int), num_nodes,
-        num_movable_nodes, num_filler_nodes, pin2node_map.numel(), xl, yl, xh,
+        num_movable_nodes, num_filler_nodes, pin2node_map.numel(),
+        DREAMPLACE_TENSOR_DATA_PTR(flat_net2pin_map, int),
+        DREAMPLACE_TENSOR_DATA_PTR(flat_net2pin_start_map, int),
+        num_nets,
+        xl, yl, xh,
         yh, site_width, row_height, bin_size_x, bin_size_y, filename);
   });
 

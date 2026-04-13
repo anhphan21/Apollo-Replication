@@ -150,7 +150,6 @@ inline bool read(YamlDataBase& db, std::string const& filename) {
             }
           }
         }
-        std::cout << "Check Instance" << std::endl;
         db.yaml_instance_cbk(inst);
       }
     }
@@ -168,7 +167,6 @@ inline bool read(YamlDataBase& db, std::string const& filename) {
           net.connections.push_back(splitNetConnection(connStr));
         }
         db.yaml_net_cbk(net);
-        std::cout << "Check Net" << std::endl;
       }
     }
 
@@ -183,9 +181,7 @@ inline bool read(YamlDataBase& db, std::string const& filename) {
         }
         db.yaml_port_cbk(port);
       }
-      std::cout << "Check Port" << std::endl;
     }
-    std::cout << "Test abc" << std::endl;
 
     // 7. Parse constraints
     if (root["constraints"] && root["constraints"].IsMap()) {

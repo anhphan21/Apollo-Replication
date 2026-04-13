@@ -186,6 +186,8 @@ bool UserParam::readNormal(int argc, char** argv, UserParamExtHelper const& help
       fileFormat = BOOKSHELFALL;
     else if (limbo::iequals(fileFormatStr, "YAML"))
       fileFormat = YAML;
+    else if (limbo::iequals(fileFormatStr, "YML"))
+      fileFormat = YAML;
     // if specified Bookshelf input, fileFormat should also be Bookshelf
     if (defInput.empty() && (fileFormat == DEF || fileFormat == DEFSIMPLE)) {
       fileFormat = BOOKSHELF;

@@ -148,10 +148,11 @@ void PlaceDB::yaml_instance_cbk(YamlParser::YamlInstance const& inst) {
   // default to 50 units on all 4 sides so the solver sees a halo-padded shape.
   coordinate_type hL, hD, hR, hU;
   if (inst.has_halo) {
-    hL = static_cast<coordinate_type>(inst.halo_left);
-    hD = static_cast<coordinate_type>(inst.halo_down);
-    hR = static_cast<coordinate_type>(inst.halo_right);
-    hU = static_cast<coordinate_type>(inst.halo_up);
+    // TODO: for Apollo placement
+    hL = static_cast<coordinate_type>(50);
+    hD = static_cast<coordinate_type>(50);
+    hR = static_cast<coordinate_type>(50);
+    hU = static_cast<coordinate_type>(50);
   } else {
     hL = hD = hR = hU = static_cast<coordinate_type>(50);
   }
@@ -189,11 +190,9 @@ void PlaceDB::yaml_instance_cbk(YamlParser::YamlInstance const& inst) {
   if (node.status() == PlaceStatusEnum::FIXED) {
     m_numFixed += 1;
     m_vFixedNodeIndex.emplace_back(node.id());
-    std::cout << "Add node to fixed: " << m_vFixedNodeIndex.size() << "\n";
   } else {
     m_numMovable += 1;
     m_vMovableNodeIndex.emplace_back(node.id());
-    std::cout << "Add node to move: " << m_vMovableNodeIndex.size() << "\n";
   }
 
   // reserve space for pins

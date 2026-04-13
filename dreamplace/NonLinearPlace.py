@@ -694,7 +694,11 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                             iteration += 1
                             # refresh net crossing count every 100 iterations (PIC only)
                             if placedb.is_yaml_input and iteration % 100 == 0:
-                                model.op_collections.update_crossing_op(self.pos[0])
+                                net_crossing_cnt = model.op_collections.update_crossing_op(self.pos[0])
+                                total_crossings = net_crossing_cnt.sum().item()
+                                per_net = net_crossing_cnt.tolist()
+                                logging.info("net_crossing iter=%d  total=%d  per_net=%s",
+                                             iteration, total_crossings, per_net)
                             # stopping criteria
                             if Lsub_stop_criterion(
                                 Lgamma_step, Llambda_density_weight_step, Lsub_step, Lsub_metrics
