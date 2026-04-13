@@ -27,10 +27,12 @@ struct YamlInstance
     float halo_down;            ///< halo down
     float halo_right;           ///< halo right
     float halo_up;              ///< halo up
+    bool  has_halo;             ///< true if halo was explicitly given in YAML
 
     YamlInstance()
         : x(0), y(0)
         , halo_left(0), halo_down(0), halo_right(0), halo_up(0)
+        , has_halo(false)
     {}
 };
 

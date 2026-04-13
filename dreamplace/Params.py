@@ -158,7 +158,9 @@ class Params:
             design_name = os.path.basename(self.verilog_input).replace(".v", "").replace(".V", "")
         elif self.def_input: 
             design_name = os.path.basename(self.def_input).replace(".def", "").replace(".DEF", "")
-        return design_name 
+        elif self.yaml_input:
+            design_name = os.path.basename(self.yaml_input).replace(".yaml", "").replace(".YAML", "")
+        return design_name
 
     def solution_file_suffix(self): 
         """
@@ -166,5 +168,7 @@ class Params:
         """
         if self.def_input is not None and os.path.exists(self.def_input): # LEF/DEF 
             return "def"
+        elif self.yaml_input is not None and os.path.exists(self.yaml_input):
+            return "yaml"
         else: # Bookshelf
             return "pl"

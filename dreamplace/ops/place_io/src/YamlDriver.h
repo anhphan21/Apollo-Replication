@@ -145,6 +145,7 @@ inline bool read(YamlDataBase& db, std::string const& filename) {
                 inst.halo_down  = pl[3][1].as<float>();
                 inst.halo_right = pl[3][2].as<float>();
                 inst.halo_up    = pl[3][3].as<float>();
+                inst.has_halo   = true;
               }
             }
           }

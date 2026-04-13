@@ -12,6 +12,7 @@
 #include "Iterators.h"
 #include "LefCbkHelper.h"
 #include "RowMap.h"
+#include "YamlWriter.h"
 #include "utility/src/defs.h"
 //#include <boost/timer/timer.hpp>
 
@@ -1390,6 +1391,118 @@ bool PlaceDB::write(std::string const& filename, SolutionFileFormat ff,
     case BOOKSHELFALL:
       flag = BookShelfWriter(*this).writeAll(filename, designName(), x, y);
       break;
+    case YAML: {
+      // Reconstruct a YAML PIC design from the PlaceDB state and emit it.
+      // Instance x/y are taken from the override arrays when available
+      // (same convention as BookshelfWriter: override only for movable nodes).
+      YamlParser::YamlWriter writer;
+
+      std::size_t numInst = numMovable() + numFixed();
+
+      // settings
+      YamlParser::YamlSettings settings;
+      settings.design = designName();
+      settings.units_distance_microns = static_cast<float>(defUnit());
+      settings.die_xl = static_cast<float>(xl());
+      settings.die_yl = static_cast<float>(yl());
+      settings.die_xh = static_cast<float>(xh());
+      settings.die_yh = static_cast<float>(yh());
+      settings.num_instances = static_cast<unsigned int>(numInst);
+      settings.num_nets = static_cast<unsigned int>(m_vNet.size());
+      settings.num_ports = static_cast<unsigned int>(numIOPin());
+      settings.wg_radius = 0.0f;
+      writer.setSettings(settings);
+
+      // library macros — only cell macros [0, numMacro); IO-pin virtual macros are skipped
+      for (std::size_t mi = 0; mi < numMacro(); ++mi) {
+        Macro const& m = m_vMacro[mi];
+        YamlParser::YamlMacro ym;
+        ym.name     = m.name();
+        ym.type     = m.className();
+        ym.origin_x = static_cast<float>(m.initOrigin().x());
+        ym.origin_y = static_cast<float>(m.initOrigin().y());
+        ym.size_x   = static_cast<float>(m.width());
+        ym.size_y   = static_cast<float>(m.height());
+        ym.site     = m.siteName();
+        for (MacroPin const& mp : m.macroPins()) {
+          YamlParser::YamlMacroPin yp;
+          yp.name = mp.name();
+          Box<coordinate_type> const& bb = mp.bbox();
+          // pin_offset is the pin center; pin_width was stored as the bbox side
+          yp.pin_offset_x = static_cast<float>(0.5 * (bb.xl() + bb.xh()));
+          yp.pin_offset_y = static_cast<float>(0.5 * (bb.yl() + bb.yh()));
+          yp.pin_width    = static_cast<float>(bb.xh() - bb.xl());
+          yp.pin_orient   = mp.portOrientAngle();
+          ym.pins.push_back(yp);
+        }
+        writer.addMacro(ym);
+      }
+
+      // instances — movable+fixed live in node id range [0, numInst); IO pins follow
+      // Node bboxes are halo-inflated in PlaceDB; subtract halo to recover the
+      // original instance position expected by the YAML format.
+      for (std::size_t ni = 0; ni < numInst; ++ni) {
+        Node const& node = m_vNode[ni];
+        YamlParser::YamlInstance yi;
+        yi.name       = nodeName(node);
+        yi.macro_type = macroName(node);
+        yi.component  = macroName(node);
+
+        coordinate_type xx = node.xl();
+        coordinate_type yy = node.yl();
+        if (node.id() < numMovable()) {
+          if (x) xx = x[node.id()];
+          if (y) yy = y[node.id()];
+        }
+
+        // halo: Box stores (halo_left, halo_down, halo_right, halo_up) in (xl, yl, xh, yh)
+        coordinate_type hL = 0, hD = 0, hR = 0, hU = 0;
+        if (node.id() < m_vNodeHalo.size()) {
+          Box<coordinate_type> const& h = m_vNodeHalo[node.id()];
+          hL = h.xl(); hD = h.yl(); hR = h.xh(); hU = h.yh();
+        }
+
+        yi.x          = static_cast<float>(xx + hL);
+        yi.y          = static_cast<float>(yy + hD);
+        yi.status     = std::string(PlaceStatus(node.status()));
+        yi.orient     = std::string(Orient(node.orient()));
+        yi.halo_left  = static_cast<float>(hL);
+        yi.halo_down  = static_cast<float>(hD);
+        yi.halo_right = static_cast<float>(hR);
+        yi.halo_up    = static_cast<float>(hU);
+        yi.has_halo   = true;
+        writer.addInstance(yi);
+      }
+
+      // nets
+      for (Net const& net : m_vNet) {
+        YamlParser::YamlNet yn;
+        yn.name = netName(net);
+        for (index_type pinId : net.pins()) {
+          Pin const& p = m_vPin[pinId];
+          Node const& n = m_vNode[p.nodeId()];
+          MacroPin const& mp = macroPin(p);
+          yn.connections.emplace_back(nodeName(n), mp.name());
+        }
+        writer.addNet(yn);
+      }
+
+      // ports — IO-pin virtual nodes sit past the movable+fixed range
+      for (std::size_t ni = numInst; ni < m_vNode.size(); ++ni) {
+        Node const& node = m_vNode[ni];
+        YamlParser::YamlPort yp;
+        yp.name      = nodeName(node);
+        yp.direction = "INOUT";
+        writer.addPort(yp);
+      }
+
+      // constraints are already cached as YamlConstraint during parse
+      for (YamlParser::YamlConstraint const& c : m_vConstraint) {
+        writer.addConstraint(c);
+      }
+
+      flag = writer.write(filename);
+    } break;
     default:
       dreamplacePrint(kERROR, "unknown solution format at line %u\n", __LINE__);
       break;

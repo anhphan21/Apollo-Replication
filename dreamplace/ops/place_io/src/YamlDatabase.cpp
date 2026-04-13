@@ -144,10 +144,29 @@ void PlaceDB::yaml_instance_cbk(YamlParser::YamlInstance const& inst) {
   property.setMacroId(foundMacro->second);
   Macro const& macro = m_vMacro.at(property.macroId());
 
-  // set position and size
+  // resolve halo: if YAML explicitly specified halo, use it; otherwise
+  // default to 50 units on all 4 sides so the solver sees a halo-padded shape.
+  coordinate_type hL, hD, hR, hU;
+  if (inst.has_halo) {
+    hL = static_cast<coordinate_type>(inst.halo_left);
+    hD = static_cast<coordinate_type>(inst.halo_down);
+    hR = static_cast<coordinate_type>(inst.halo_right);
+    hU = static_cast<coordinate_type>(inst.halo_up);
+  } else {
+    hL = hD = hR = hU = static_cast<coordinate_type>(50);
+  }
+
+  // Bake halo into the node bbox so PyPlaceDB/BNAG sees the halo-inflated shape.
+  // The macro-local (ox, oy) becomes node-local (ox + hL, oy + hD); the
+  // original instance position (px, py) still sits at (node.xl + hL, node.yl + hD).
   coordinate_type px = static_cast<coordinate_type>(inst.x);
   coordinate_type py = static_cast<coordinate_type>(inst.y);
-  node.set(px, py, px + macro.width(), py + macro.height());
+  node.set(px - hL, py - hD, px + macro.width() + hR, py + macro.height() + hU);
+
+  // track halo per-node so we can undo it when writing back out
+  if (m_vNodeHalo.size() < static_cast<std::size_t>(node.id()) + 1)
+    m_vNodeHalo.resize(node.id() + 1, Box<coordinate_type>(0, 0, 0, 0));
+  m_vNodeHalo[node.id()] = Box<coordinate_type>(hL, hD, hR, hU);
 
   // set status
   if (inst.status == "FIXED")
@@ -247,12 +266,31 @@ void PlaceDB::yaml_port_cbk(YamlParser::YamlPort const& port) {
   node.setStatus(PlaceStatusEnum::FIXED);
   node.set(0, 0, 0, 0);
 
+  // IO pin nodes carry no halo
+  if (m_vNodeHalo.size() < static_cast<std::size_t>(node.id()) + 1)
+    m_vNodeHalo.resize(node.id() + 1, Box<coordinate_type>(0, 0, 0, 0));
+
   m_numIOPin += 1;
 }
 
 void PlaceDB::yaml_constraint_cbk(YamlParser::YamlConstraint const& constr) { m_vConstraint.push_back(constr); }
 
 void PlaceDB::yaml_end_cbk() {
+  // Pin offsets were set to the macro-local center in yaml_net_cbk, but we
+  // inflated node bboxes by halo, which shifted each node's local origin by
+  // (-halo_left, -halo_down). Shift every pin's offset by (+halo_left, +halo_down)
+  // so pinPos = node.xl + pin.offset stays at the original physical location.
+  if (m_vNodeHalo.size() < m_vNode.size())
+    m_vNodeHalo.resize(m_vNode.size(), Box<coordinate_type>(0, 0, 0, 0));
+  for (Node const& node : m_vNode) {
+    Box<coordinate_type> const& h = m_vNodeHalo[node.id()];
+    if (h.xl() == 0 && h.yl() == 0) continue;
+    for (index_type pinId : node.pins()) {
+      Pin& p = m_vPin[pinId];
+      p.setOffset(Point<coordinate_type>(p.offset().x() + h.xl(), p.offset().y() + h.yl()));
+    }
+  }
+
   // set core site based on max usage
   if (!m_vSiteUsedCount.empty()) {
     auto itMax = std::max_element(m_vSiteUsedCount.begin(), m_vSiteUsedCount.end());

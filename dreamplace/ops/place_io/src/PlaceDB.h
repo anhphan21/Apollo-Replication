@@ -514,6 +514,7 @@ class PlaceDB : public DefParser::DefDataBase
         string2index_map_type m_mGroupName2Index; ///< map group name to index
 
         std::vector<YamlParser::YamlConstraint> m_vConstraint; ///< PIC placement constraints (alignment, uniform, etc.)
+        std::vector<Box<coordinate_type>> m_vNodeHalo; ///< per-node halo stored as Box(halo_left, halo_down, halo_right, halo_up); zeros for non-PIC or IO-pin nodes
 
         /// data for routing configuration 
         index_type m_numRoutingGrids[3]; ///< global routing grids in X, Y and number of layers 

@@ -356,9 +356,12 @@ void PyPlaceDB::set(PlaceDB const& db) {
 
     // Macro dimensions in N orientation (before any rotation that might
     // already have been applied to node_size_x/y for non-yaml flow).
+    // For yaml (PIC) designs the PlaceDB node bbox is halo-inflated, so use the
+    // node dimensions directly — pin offsets were shifted by (halo_left, halo_down)
+    // at parse time, placing them in the enlarged frame.
     Macro const& macro      = db.macro(db.macroId(node));
-    PlaceDB::coordinate_type macro_w = macro.width();
-    PlaceDB::coordinate_type macro_h = macro.height();
+    PlaceDB::coordinate_type macro_w = is_yaml_input ? node.width()  : macro.width();
+    PlaceDB::coordinate_type macro_h = is_yaml_input ? node.height() : macro.height();
 
     // Decompose orient into rotation + flip
     std::pair<int32_t, int32_t> df = getOrientDegreeFlip(node.orient());

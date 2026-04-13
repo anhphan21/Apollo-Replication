@@ -49,6 +49,7 @@ void bind_PyPlaceDB(pybind11::module& m)
 {
     pybind11::class_<DREAMPLACE_NAMESPACE::PyPlaceDB>(m, "PyPlaceDB")
         .def(pybind11::init<>())
+        .def_readwrite("is_yaml_input", &DREAMPLACE_NAMESPACE::PyPlaceDB::is_yaml_input)
         .def_readwrite("num_nodes", &DREAMPLACE_NAMESPACE::PyPlaceDB::num_nodes)
         .def_readwrite("num_terminals", &DREAMPLACE_NAMESPACE::PyPlaceDB::num_terminals)
         .def_readwrite("num_terminal_NIs", &DREAMPLACE_NAMESPACE::PyPlaceDB::num_terminal_NIs)

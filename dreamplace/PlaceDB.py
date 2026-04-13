@@ -536,15 +536,14 @@ class PlaceDB (object):
             pin_name = self.pin_names[i].decode() if isinstance(self.pin_names[i], bytes) else self.pin_names[i]
             node_name = self.node_names[self.pin2node_map[i]].decode() if isinstance(self.node_names[self.pin2node_map[i]], bytes) else self.node_names[self.pin2node_map[i]]
             net_name = self.net_names[self.pin2net_map[i]].decode() if isinstance(self.net_names[self.pin2net_map[i]], bytes) else self.net_names[self.pin2net_map[i]]
-            direct = self.pin_direct[i].decode() if isinstance(self.pin_direct[i], bytes) else self.pin_direct[i]
             side_names = {0: "LEFT", 1: "RIGHT", 2: "LOWER", 3: "UPPER", 4: "UNKNOWN"}
             side_str = side_names.get(int(self.pin_side[i]), "UNKNOWN") if self.pin_side is not None else "N/A"
             dir_str = ""
             if self.pin_dir_x is not None and self.pin_dir_y is not None:
                 dir_str = ", dir(%g, %g)" % (self.pin_dir_x[i], self.pin_dir_y[i])
-            logging.info("  pin %s(%d): node=%s, net=%s, offset(%g, %g), direct=%s, side=%s%s"
+            logging.info("  pin %s(%d): node=%s, net=%s, offset(%g, %g), side=%s%s"
                          % (pin_name, i, node_name, net_name,
-                            self.pin_offset_x[i], self.pin_offset_y[i], direct, side_str, dir_str))
+                            self.pin_offset_x[i], self.pin_offset_y[i], side_str, dir_str))
 
         # node port counts per physical side (PIC-specific)
         if self.node_num_ports is not None and len(self.node_num_ports) > 0:
@@ -1170,15 +1169,17 @@ row height = %g, site width = %g
         """
         @brief write placement solution
         @param filename output file name
-        @param sol_file_format solution file format, DEF|DEFSIMPLE|BOOKSHELF|BOOKSHELFALL
+        @param sol_file_format solution file format, DEF|DEFSIMPLE|BOOKSHELF|BOOKSHELFALL|YAML
         """
         tt = time.time()
         logging.info("writing to %s" % (filename))
         if sol_file_format is None:
             if filename.endswith(".def"):
                 sol_file_format = place_io.SolutionFileFormat.DEF
-            else:
+            elif filename.endswith(".aux") or filename.endswith(".pl"):
                 sol_file_format = place_io.SolutionFileFormat.BOOKSHELF
+            elif filename.endswith(".yaml") or filename.endswith(".yml"):
+                sol_file_format = place_io.SolutionFileFormat.YAML
 
         # unscale locations
         node_x, node_y = self.unscale_pl(params.shift_factor, params.scale_factor)

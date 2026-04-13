@@ -172,7 +172,7 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                             lr=0,
                             obj_and_grad_fn=model.obj_and_grad_fn,
                             constraint_fn=self.op_collections.move_boundary_op,
-                            use_bb = params.use_bb
+                            use_bb= True if placedb.is_yaml_input else params.use_bb,
                         )
                     # 2. The torch_optimizer package
                     elif optimizer_name.lower() == "aggmo":
@@ -424,7 +424,7 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                         assert 0, "unsupported optimizer %s" % (optimizer_name)
 
                     # plot placement
-                    if params.plot_flag and (iteration % 100 == 0 or iteration == 999):
+                    if params.plot_flag and (iteration % 10 == 0 or iteration == 99):
                         cur_pos = self.pos[0].data.clone().cpu().numpy()
                         self.plot(params, placedb, iteration, cur_pos)
 
@@ -692,6 +692,9 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                                     perturb_counter += 1
 
                             iteration += 1
+                            # refresh net crossing count every 100 iterations (PIC only)
+                            if placedb.is_yaml_input and iteration % 100 == 0:
+                                model.op_collections.update_crossing_op(self.pos[0])
                             # stopping criteria
                             if Lsub_stop_criterion(
                                 Lgamma_step, Llambda_density_weight_step, Lsub_step, Lsub_metrics

@@ -28,7 +28,7 @@ import dreamplace.ops.density_overflow.density_overflow as density_overflow
 import dreamplace.ops.electric_potential.electric_overflow as electric_overflow
 import dreamplace.ops.electric_potential.electric_potential as electric_potential
 import dreamplace.ops.density_potential.density_potential as density_potential
-import dreamplace.ops.net_spacing as net_spacing
+import dreamplace.ops.net_spacing.net_spacing as net_spacing
 import dreamplace.ops.rudy.rudy as rudy
 import dreamplace.ops.pin_utilization.pin_utilization as pin_utilization
 import dreamplace.ops.nctugr_binary.nctugr_binary as nctugr_binary
@@ -159,7 +159,7 @@ class PlaceObj(nn.Module):
         ### increase density penalty if slow convergence
         self.density_factor = 1
 
-        if(len(placedb.regions) > 0):
+        if(len(placedb.regions) > 0 or placedb.is_yaml_input):
             ### fence region will enable quadratic penalty by default
             self.quad_penalty = True
         else:
@@ -224,7 +224,7 @@ class PlaceObj(nn.Module):
                 self.op_collections.pin_pos_op)
         elif global_place_params["wirelength"] == "cos_weighted_average":
             self.op_collections.wirelength_op, self.op_collections.update_gamma_op = self.build_cos_weighted_average_wl(
-                param, placedb, self.data_collections,
+                params, placedb, self.data_collections,
                 self.op_collections.pin_pos_op
             )
         else:
@@ -232,7 +232,7 @@ class PlaceObj(nn.Module):
                 global_place_params["wirelength"])
 
         # PIC-specific ops: cosine-weighted wirelength and net spacing
-        if self.data_collections.is_yaml_input:
+        if placedb.is_yaml_input:
             self.op_collections.net_spacing_op, self.op_collections.update_crossing_op = self.build_net_spacing(
                 params, placedb, self.data_collections,
                 self.op_collections.pin_pos_op)
@@ -254,12 +254,16 @@ class PlaceObj(nn.Module):
         ### build multiple density op for multi-electric field
         if len(self.placedb.regions) > 0:
             self.op_collections.fence_region_density_ops, self.op_collections.fence_region_density_merged_op, self.op_collections.fence_region_density_overflow_merged_op = self.build_multi_fence_region_density_op()
+        
         self.op_collections.update_density_weight_op = self.build_update_density_weight(
             params, placedb)
+
         self.op_collections.precondition_op = self.build_precondition(
             params, placedb, self.data_collections, self.op_collections)
+        
         self.op_collections.noise_op = self.build_noise(
             params, placedb, self.data_collections)
+        
         if params.routability_opt_flag:
             # compute congestion map, RISA/RUDY congestion map
             self.op_collections.route_utilization_map_op = self.build_route_utilization_map(
@@ -292,15 +296,18 @@ class PlaceObj(nn.Module):
                 'Llambda_density_weight_iteration']
         else:
             self.Llambda_density_weight_iteration = 1
+
         if 'Lsub_iteration' in global_place_params:
             self.Lsub_iteration = global_place_params['Lsub_iteration']
         else:
             self.Lsub_iteration = 1
+        
         if 'routability_Lsub_iteration' in global_place_params:
             self.routability_Lsub_iteration = global_place_params[
                 'routability_Lsub_iteration']
         else:
             self.routability_Lsub_iteration = self.Lsub_iteration
+        
         self.start_fence_region_density = False
 
     def obj_fn(self, pos):
@@ -322,9 +329,12 @@ class PlaceObj(nn.Module):
             ### density weight subgradient preconditioner
             self.density_weight_grad_precond = self.init_density.masked_scatter(self.init_density > 0, 1 /self.init_density[self.init_density > 0])
             self.quad_penalty_coeff = self.density_quad_coeff / 2 * self.density_weight_grad_precond
+        
         if self.quad_penalty:
             ### quadratic density penalty
+            print("Use quadratic penalty")
             self.density = self.density * (1 + self.quad_penalty_coeff * self.density)
+
         if len(self.placedb.regions) > 0:
             result = self.wirelength + self.density_weight.dot(self.density)
         else:
@@ -589,7 +599,7 @@ class PlaceObj(nn.Module):
         bend_radii = torch.tensor([5.0], dtype=dtype, device=device)
         cross_size = torch.tensor([5.0], dtype=dtype, device=device)
 
-        net_spacing_op = net_spacing.net_spacing.NetSpacing(
+        net_spacing_op = net_spacing.NetSpacing(
             flat_netpin=data_collections.flat_net2pin_map,
             netpin_start=data_collections.flat_net2pin_start_map,
             pin2net_map=data_collections.pin2net_map,

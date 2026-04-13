@@ -43,8 +43,9 @@ def place(params, learning_rate_value):
     placedb(params)
     logging.info("reading database takes %.2f seconds" % (time.time() - tt))
 
-    placedb.print_yaml_db()
-    return None
+    # For Debugging AnhPhan
+    # placedb.print_yaml_db()
+    # return None
 
     # Read timing constraints provided in the benchmarks into out timing analysis
     # engine and then pass the timer into the placement core.

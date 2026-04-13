@@ -273,8 +273,7 @@ class PlaceOpCollection(object):
         self.update_cos_gamma_op = None
         self.net_spacing_op = None
         self.update_crossing_op = None
-
-
+           
 class BasicPlace(nn.Module):
     """
     @brief Base placement class.
@@ -406,7 +405,6 @@ class BasicPlace(nn.Module):
                                                     self.device)
         logging.debug("build data_collections takes %.2f seconds" %
                       (time.time() - tt))
-
         # similarly I wrap all ops
         tt = time.time()
         self.op_collections = PlaceOpCollection()
@@ -440,12 +438,15 @@ class BasicPlace(nn.Module):
         else:
             self.op_collections.legalize_op = self.build_legalization(
             params, placedb, self.data_collections, self.device)
+        
         if params.macro_place_flag:
             self.op_collections.macro_legalize_op = self.build_macro_legalization(
             params, placedb, self.data_collections, self.device)
+        
         # detailed placement
         self.op_collections.detailed_place_op = self.build_detailed_placement(
             params, placedb, self.data_collections, self.device)
+        
         # draw placement
         self.op_collections.draw_place_op = self.build_draw_placement(
             params, placedb)
