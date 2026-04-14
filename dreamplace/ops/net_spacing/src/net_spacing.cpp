@@ -119,16 +119,20 @@ int computeNetSpacingLauncher(const T* x,
     T relu_x = DREAMPLACE_STD_NAMESPACE::max(T(0), s_i - DREAMPLACE_STD_NAMESPACE::fabs(dx));
     T relu_y = DREAMPLACE_STD_NAMESPACE::max(T(0), s_i - DREAMPLACE_STD_NAMESPACE::fabs(dy));
 
+    // Gradient of relu(s_i - |dx|)^2 w.r.t. x[p0]:
+    //   d/dx[p0] = 2 * relu_x * (-sign(dx))     since d|dx|/dx[p0] = sign(dx)
+    //   d/dx[p1] = 2 * relu_x * (+sign(dx))     since d|dx|/dx[p1] = -sign(dx)
+    // where sign = (dx > 0 ? -1 : 1) = -sign(dx).
     if (relu_x > T(0)) {
       T sign                      = (dx > T(0) ? -1.0 : 1.0);
-      grad_intermediate_x[p0_idx] = 2.0 * relu_x * pin_dir_x[p0_idx] * sign;
-      grad_intermediate_x[p1_idx] = 2.0 * relu_x * pin_dir_x[p1_idx] * sign;
+      grad_intermediate_x[p0_idx] =  2.0 * relu_x * sign;
+      grad_intermediate_x[p1_idx] = -2.0 * relu_x * sign;
     }
 
     if (relu_y > T(0)) {
       T sign                      = (dy > T(0) ? -1.0 : 1.0);
-      grad_intermediate_y[p0_idx] = 2.0 * relu_y * pin_dir_y[p0_idx] * sign;
-      grad_intermediate_y[p1_idx] = 2.0 * relu_y * pin_dir_y[p1_idx] * sign;
+      grad_intermediate_y[p0_idx] =  2.0 * relu_y * sign;
+      grad_intermediate_y[p1_idx] = -2.0 * relu_y * sign;
     }
 
     partial_net_spacing[i] = relu_x * relu_x + relu_y * relu_y;
