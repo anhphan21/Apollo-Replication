@@ -50,7 +50,7 @@ class PlaceDrawer {
     NODETEXT = 2,
     PIN = 4,
     NET = 8,
-    ALL = NODE | NODETEXT
+    ALL = NODE | NODETEXT | NET | PIN
   };
   /// constructor
   PlaceDrawer(
@@ -202,25 +202,25 @@ class PlaceDrawer {
         }
       }
       // filler
-      for (int i = m_num_nodes - m_num_filler_nodes; i < m_num_nodes; ++i) {
-        cairo_rectangle(c, m_x[i], m_y[i], m_node_size_x[i], m_node_size_y[i]);
-        cairo_set_source_rgba(c, 115 / 255.0, 115 / 255.0, 125 / 255.0, 0.5);
-        cairo_fill(c);
-        cairo_rectangle(c, m_x[i], m_y[i], m_node_size_x[i], m_node_size_y[i]);
-        cairo_set_source_rgba(c, 100 / 255.0, 100 / 255.0, 100 / 255.0, 0.8);
-        cairo_stroke(c);
-        if (m_content & NODETEXT) {
-          sprintf(buf, "%u", i);
-          cairo_set_font_size(c, m_node_size_y[i] / 20);
-          cairo_text_extents(c, buf, &extents);
-          cairo_move_to(c,
-                        (m_x[i] + m_node_size_x[i] / 2) -
-                            (extents.width / 2 + extents.x_bearing),
-                        (m_y[i] + m_node_size_y[i] / 2) -
-                            (extents.height / 2 + extents.y_bearing));
-          cairo_show_text(c, buf);
-        }
-      }
+      // for (int i = m_num_nodes - m_num_filler_nodes; i < m_num_nodes; ++i) {
+      //   cairo_rectangle(c, m_x[i], m_y[i], m_node_size_x[i], m_node_size_y[i]);
+      //   cairo_set_source_rgba(c, 115 / 255.0, 115 / 255.0, 125 / 255.0, 0.5);
+      //   cairo_fill(c);
+      //   cairo_rectangle(c, m_x[i], m_y[i], m_node_size_x[i], m_node_size_y[i]);
+      //   cairo_set_source_rgba(c, 100 / 255.0, 100 / 255.0, 100 / 255.0, 0.8);
+      //   cairo_stroke(c);
+      //   if (m_content & NODETEXT) {
+      //     sprintf(buf, "%u", i);
+      //     cairo_set_font_size(c, m_node_size_y[i] / 20);
+      //     cairo_text_extents(c, buf, &extents);
+      //     cairo_move_to(c,
+      //                   (m_x[i] + m_node_size_x[i] / 2) -
+      //                       (extents.width / 2 + extents.x_bearing),
+      //                   (m_y[i] + m_node_size_y[i] / 2) -
+      //                       (extents.height / 2 + extents.y_bearing));
+      //     cairo_show_text(c, buf);
+      //   }
+      // }
       // movable
       for (int i = 0; i < m_num_movable_nodes; ++i) {
         cairo_rectangle(c, m_x[i], m_y[i], m_node_size_x[i], m_node_size_y[i]);

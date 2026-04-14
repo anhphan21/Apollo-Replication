@@ -173,6 +173,10 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                             obj_and_grad_fn=model.obj_and_grad_fn,
                             constraint_fn=self.op_collections.move_boundary_op,
                             use_bb= True if placedb.is_yaml_input else params.use_bb,
+                            num_movable_nodes=placedb.num_movable_nodes,
+                            num_nodes=placedb.num_nodes,
+                            num_filler_nodes=placedb.num_filler_nodes,
+                            K_max=model.Lgamma_iteration,
                         )
                     # 2. The torch_optimizer package
                     elif optimizer_name.lower() == "aggmo":
@@ -424,7 +428,7 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                         assert 0, "unsupported optimizer %s" % (optimizer_name)
 
                     # plot placement
-                    if params.plot_flag and (iteration % 10 == 0 or iteration == 99):
+                    if params.plot_flag and (iteration % 5 == 0 or iteration == 99):
                         cur_pos = self.pos[0].data.clone().cpu().numpy()
                         self.plot(params, placedb, iteration, cur_pos)
 
@@ -438,9 +442,9 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                     # Make a parameter update after having checked if closure must be called
                     def make_parameter_update():
                         if run_closure == 0:
-                          optimizer.step()
+                          optimizer.step(iteration=iteration)
                         else:
-                          optimizer.step(closure)
+                          optimizer.step(closure, iteration=iteration)
 
                     #### stop updating fence regions that are marked stop, exclude the outer cell !
                     t3 = time.time()
